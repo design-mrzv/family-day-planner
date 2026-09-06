@@ -3,7 +3,7 @@ import { type ParsedTasks } from "./schema";
 import { SYSTEM_INSTRUCTION, buildContents } from "./prompt";
 import { validateOutput } from "./validate";
 
-const MODEL = "gemini-3.6-flash";
+const MODEL = "gemini-3.5-flash-lite"; // дешевша за flash, окрема квота, парсингу вистачає
 
 // Модель повернула сміття (невалідний JSON після ретраю) — проблема у виводі, не в сервісі.
 export class ParseError extends Error {
@@ -39,7 +39,7 @@ async function callModel(ai: GoogleGenAI, text: string, today: string): Promise<
       systemInstruction: SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       temperature: 0,
-      // Парсинг простий — мінімум «думання». Без цього 3.6-flash тупить ~22с/запит.
+      // Парсинг простий — мінімум «думання».
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     },
   });
