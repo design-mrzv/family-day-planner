@@ -74,6 +74,27 @@ describe("solve", () => {
     expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(toMin("17:00"));
   });
 
+  it("правило: вечеря розкладається ввечері (не одразу вранці)", () => {
+    const r = solve([task("сніданок"), task("повечеряти")]);
+    const dinner = r.schedule.find((s) => s.title === "повечеряти");
+    expect(dinner).toBeDefined();
+    expect(toMin(dinner!.start)).toBeGreaterThanOrEqual(toMin("18:00"));
+  });
+
+  it("правило: обід розкладається ополудні", () => {
+    const r = solve([task("приготувати обід")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(toMin("12:00"));
+    expect(toMin(r.schedule[0].start)).toBeLessThan(toMin("15:00"));
+  });
+
+  it("правило: забрати дитину зі школи — вдень/ввечері, не одразу після відвезення", () => {
+    const r = solve([task("відвести молодшого сина в школу"), task("забрати дітей")]);
+    const pickup = r.schedule.find((s) => s.title === "забрати дітей");
+    expect(pickup).toBeDefined();
+    expect(toMin(pickup!.start)).toBeGreaterThanOrEqual(toMin("13:00"));
+  });
+
   it("між двома гнучкими справами є буфер (≥10 хв)", () => {
     const r = solve([task("справа один"), task("справа два")]);
     expect(r.schedule).toHaveLength(2);
