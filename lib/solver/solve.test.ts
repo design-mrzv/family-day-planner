@@ -145,6 +145,12 @@ describe("solve", () => {
     }
   });
 
+  it("явний маркер 'перед сном' у назві — ввечері, незалежно від активності", () => {
+    const r = solve([task("почитати книгу перед сном")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(toMin("18:00"));
+  });
+
   it("реалістичний змішаний день: без накладень, фіксовані на місці", () => {
     const r = solve([
       task("тренування"),

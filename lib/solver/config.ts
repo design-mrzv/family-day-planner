@@ -74,6 +74,8 @@ const RULE_WINDOWS: [(title: string) => boolean, string, string][] = [
   [(t) => /вечер[яю]|ужин/i.test(t), "18:00", WORK_END], // вечеря ввечері
   [(t) => /відвест|завезти|отвез/i.test(t), WORK_START, "09:30"], // відвезти в садок/школу — зранку
   [isChildPickup, "13:00", WORK_END], // забрати дитину з садка/школи — вдень/ввечері (не "забрати посилку")
+  // Явний маркер у назві ("перед сном", "на ніч") — довіряємо тексту, не вгадуємо активність.
+  [(t) => /перед сном|на ніч\b|на ночь\b/i.test(t), "18:00", WORK_END],
 ];
 
 export function ruleWindow(title: string): [number, number] | null {
