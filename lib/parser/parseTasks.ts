@@ -3,7 +3,7 @@ import { type ParsedTasks } from "./schema";
 import { SYSTEM_INSTRUCTION, buildContents } from "./prompt";
 import { validateOutput } from "./validate";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.6-flash";
 
 // Чесна помилка парсера (LLM повернув сміття, або нема ключа).
 export class ParseError extends Error {
@@ -24,7 +24,6 @@ async function callModel(ai: GoogleGenAI, text: string, today: string): Promise<
       systemInstruction: SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       temperature: 0,
-      thinkingConfig: { thinkingBudget: 0 },
     },
   });
   const out = res.text;
