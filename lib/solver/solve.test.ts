@@ -95,6 +95,12 @@ describe("solve", () => {
     expect(toMin(pickup!.start)).toBeGreaterThanOrEqual(toMin("13:00"));
   });
 
+  it("'забрати посилку' — без обмеження часу (не плутати з дитячим пікапом)", () => {
+    const r = solve([task("забрати посилку")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBe(toMin("07:00"));
+  });
+
   it("між двома гнучкими справами є буфер (≥10 хв)", () => {
     const r = solve([task("справа один"), task("справа два")]);
     expect(r.schedule).toHaveLength(2);

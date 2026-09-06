@@ -47,17 +47,20 @@ export function durationFor(title: string): number {
 // Без цих вікон solver ліпить усе в перше вільне вікно вранці — тому вечеря чи
 // шкільний пікап могли опинитись о 09:00. Ритм дня — теж детермінований хардкод,
 // не оцінка LLM.
-const RULE_WINDOWS: [RegExp, string, string][] = [
-  [/зарядк|разминк|тренуванн|трениров|пробіжк|пробежк|йог[аи]/i, WORK_START, "12:00"], // зранку
-  [/зйомк|знімат|зняти відео|відеомонтаж|монтаж/i, "17:00", WORK_END], // після 17:00
-  [/сніданок|завтрак/i, WORK_START, "10:00"], // сніданок зранку
-  [/обід|обед/i, "12:00", "15:00"], // обід ополудні
-  [/вечер[яю]|ужин/i, "18:00", WORK_END], // вечеря ввечері
-  [/відвест|завезти|отвез/i, WORK_START, "09:30"], // відвезти в садок/школу — зранку
-  [/забрат|забрать|заберу/i, "13:00", WORK_END], // забрати з садка/школи — вдень/ввечері
+const CHILD_CONTEXT = /сад|школ|дит|діт|син|доньк|дочк|ребен|ребён/i;
+const isChildPickup = (title: string) => /забрат|забрать|заберу/i.test(title) && CHILD_CONTEXT.test(title);
+
+const RULE_WINDOWS: [(title: string) => boolean, string, string][] = [
+  [(t) => /зарядк|разминк|тренуванн|трениров|пробіжк|пробежк|йог[аи]/i.test(t), WORK_START, "12:00"], // зранку
+  [(t) => /зйомк|знімат|зняти відео|відеомонтаж|монтаж/i.test(t), "17:00", WORK_END], // після 17:00
+  [(t) => /сніданок|завтрак/i.test(t), WORK_START, "10:00"], // сніданок зранку
+  [(t) => /обід|обед/i.test(t), "12:00", "15:00"], // обід ополудні
+  [(t) => /вечер[яю]|ужин/i.test(t), "18:00", WORK_END], // вечеря ввечері
+  [(t) => /відвест|завезти|отвез/i.test(t), WORK_START, "09:30"], // відвезти в садок/школу — зранку
+  [isChildPickup, "13:00", WORK_END], // забрати дитину з садка/школи — вдень/ввечері (не "забрати посилку")
 ];
 
 export function ruleWindow(title: string): [number, number] | null {
-  for (const [re, lo, hi] of RULE_WINDOWS) if (re.test(title)) return [toMin(lo), toMin(hi)];
+  for (const [test, lo, hi] of RULE_WINDOWS) if (test(title)) return [toMin(lo), toMin(hi)];
   return null;
 }
