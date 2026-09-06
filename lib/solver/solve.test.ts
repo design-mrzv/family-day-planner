@@ -109,6 +109,42 @@ describe("solve", () => {
     expect(gap).toBeGreaterThanOrEqual(10);
   });
 
+  it("навколо лікаря (fixed) — розширений буфер збори+дорога (≥20 хв), не 10", () => {
+    const r = solve([task("стоматолог", "11:00"), task("зустріч")]);
+    const doctor = r.schedule.find((s) => s.title === "стоматолог")!;
+    const other = r.schedule.find((s) => s.title === "зустріч")!;
+    expect(doctor.start).toBe("11:00");
+    const doctorEnd = toMin(doctor.start) + doctor.duration_min;
+    const otherStart = toMin(other.start);
+    // 'зустріч' розкладена до або після лікаря — в обох випадках відступ ≥20 хв
+    if (otherStart >= doctorEnd) {
+      expect(otherStart - doctorEnd).toBeGreaterThanOrEqual(20);
+    } else {
+      expect(toMin(doctor.start) - (otherStart + other.duration_min)).toBeGreaterThanOrEqual(20);
+    }
+  });
+
+  it("навколо шкільного пікапу — розширений буфер дорога (≥15 хв)", () => {
+    const r = solve([task("забрати дітей", "13:00"), task("готуватись до звіту")]);
+    const pickup = r.schedule.find((s) => s.title === "забрати дітей")!;
+    const other = r.schedule.find((s) => s.title === "готуватись до звіту")!;
+    const pickupEnd = toMin(pickup.start) + pickup.duration_min;
+    const otherStart = toMin(other.start);
+    if (otherStart >= pickupEnd) {
+      expect(otherStart - pickupEnd).toBeGreaterThanOrEqual(15);
+    } else {
+      expect(toMin(pickup.start) - (otherStart + other.duration_min)).toBeGreaterThanOrEqual(15);
+    }
+  });
+
+  it("гнучкі справи не лізуть в останню годину перед сном (після 21:00)", () => {
+    const tasks = Array.from({ length: 6 }, (_, i) => task(`справа ${i}`));
+    const r = solve(tasks);
+    for (const s of r.schedule) {
+      expect(toMin(s.start) + s.duration_min).toBeLessThanOrEqual(toMin("21:00"));
+    }
+  });
+
   it("реалістичний змішаний день: без накладень, фіксовані на місці", () => {
     const r = solve([
       task("тренування"),

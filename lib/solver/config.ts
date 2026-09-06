@@ -6,6 +6,10 @@ export const WORK_END = "22:00";
 export const BUFFER_MIN = 10; // буфер між справами
 export const DEFAULT_DURATION_MIN = 30; // fallback для незнайомої справи
 
+// Гнучкі справи не ставимо в останню годину перед сном — захищений час на хаос/відпочинок.
+// Фіксовані справи (явний fixed_time) це не обмежує — то свідомий вибір мами.
+export const FLEXIBLE_END = "21:00";
+
 // --- Час: "HH:MM" ↔ хвилини від опівночі ---
 export function toMin(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
@@ -40,6 +44,18 @@ const DURATION_RULES: [RegExp, number][] = [
 export function durationFor(title: string): number {
   for (const [re, min] of DURATION_RULES) if (re.test(title)) return min;
   return DEFAULT_DURATION_MIN;
+}
+
+// --- Додатковий буфер збори+дорога навколо справ, що вимагають виходу з дому ---
+// Тривалість справи — це сама подія; буфер — окремо, щоб сусідня справа не лізла впритул.
+const TRAVEL_BUFFER_RULES: [RegExp, number][] = [
+  [/лікар|врач|поліклін|стоматолог|аналіз|аналог/i, 20],
+  [/садок|садик|школ|відвест|отвез|завезти|забрат|забрать|заберу/i, 15],
+];
+
+export function travelBufferFor(title: string): number {
+  for (const [re, min] of TRAVEL_BUFFER_RULES) if (re.test(title)) return min;
+  return 0;
 }
 
 // --- Хардкод-правила Етапу 1: вікно дозволеного часу для гнучкої справи ---

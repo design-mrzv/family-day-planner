@@ -3,22 +3,26 @@ import type { SolverResult, Scheduled, OverflowItem, Deadline } from "./types";
 import {
   WORK_START,
   WORK_END,
+  FLEXIBLE_END,
   BUFFER_MIN,
   toMin,
   toHHMM,
   durationFor,
   ruleWindow,
+  travelBufferFor,
 } from "./config";
 
 interface Interval {
   start: number;
   end: number;
+  buffer: number; // мінімальний відступ до цієї справи (збори+дорога), понад BUFFER_MIN
 }
 
 // Чи вміщується [s, s+d] у вільне місце з буфером до кожної зайнятої справи.
 function fits(s: number, d: number, occupied: Interval[]): boolean {
   for (const o of occupied) {
-    const clear = s >= o.end + BUFFER_MIN || s + d <= o.start - BUFFER_MIN;
+    const gap = Math.max(BUFFER_MIN, o.buffer);
+    const clear = s >= o.end + gap || s + d <= o.start - gap;
     if (!clear) return false;
   }
   return true;
@@ -27,11 +31,12 @@ function fits(s: number, d: number, occupied: Interval[]): boolean {
 // Найраніший старт для гнучкої справи у вікні [lo, hi] з тривалістю d. null — не влізає.
 function placeFlexible(lo: number, hi: number, d: number, occupied: Interval[]): number | null {
   const lo2 = Math.max(lo, toMin(WORK_START));
-  const hi2 = Math.min(hi, toMin(WORK_END));
+  const hi2 = Math.min(hi, toMin(FLEXIBLE_END)); // остання година перед сном — захищена
+
   if (lo2 + d > hi2) return null;
 
-  // Кандидати: початок вікна + одразу після кожної зайнятої справи (з буфером).
-  const candidates = [lo2, ...occupied.map((o) => o.end + BUFFER_MIN)]
+  // Кандидати: початок вікна + одразу після кожної зайнятої справи (з її буфером).
+  const candidates = [lo2, ...occupied.map((o) => o.end + Math.max(BUFFER_MIN, o.buffer))]
     .filter((s) => s >= lo2 && s + d <= hi2)
     .sort((a, b) => a - b);
 
@@ -82,7 +87,7 @@ export function solve(tasks: Task[]): SolverResult {
       overflow.push({ title: iv.task.title, duration_min, reason: "conflict" });
     } else {
       schedule.push({ title: iv.task.title, start: toHHMM(iv.start), duration_min, type: "fixed" });
-      occupied.push({ start: iv.start, end: iv.end });
+      occupied.push({ start: iv.start, end: iv.end, buffer: travelBufferFor(iv.task.title) });
     }
   });
 
@@ -102,7 +107,7 @@ export function solve(tasks: Task[]): SolverResult {
       overflow.push({ title: m.task.title, duration_min: m.d, reason: "no_slot" });
     } else {
       schedule.push({ title: m.task.title, start: toHHMM(start), duration_min: m.d, type: "flexible" });
-      occupied.push({ start, end: start + m.d });
+      occupied.push({ start, end: start + m.d, buffer: travelBufferFor(m.task.title) });
     }
   }
 
