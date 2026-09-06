@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { type ParsedTasks } from "./schema";
 import { SYSTEM_INSTRUCTION, buildContents } from "./prompt";
 import { validateOutput } from "./validate";
@@ -24,6 +24,8 @@ async function callModel(ai: GoogleGenAI, text: string, today: string): Promise<
       systemInstruction: SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
       temperature: 0,
+      // Парсинг простий — мінімум «думання». Без цього 3.6-flash тупить ~22с/запит.
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     },
   });
   const out = res.text;

@@ -1,5 +1,6 @@
 import { parseTasks, ParseError } from "@/lib/parser/parseTasks";
 import { DATE_RE } from "@/lib/parser/schema";
+import { solve } from "@/lib/solver/solve";
 
 // Ключ Gemini живе тут, на сервері. Node-рантайм (SDK потребує Node, не edge).
 export const runtime = "nodejs";
@@ -30,15 +31,9 @@ export async function POST(request: Request) {
   const today = typeof b?.today === "string" && DATE_RE.test(b.today) ? b.today : todayString();
 
   try {
-    const parsed = await parseTasks(text, today);
-    // Проміжно (до solver-а 1.4): віддаємо форму контракту з порожньою розкладкою
-    // + розпарсені справи в _parsed, щоб очима звірити роботу парсера.
-    return Response.json({
-      schedule: [],
-      overflow: [],
-      deadlines: [],
-      _parsed: parsed.tasks,
-    });
+    const parsed = await parseTasks(text, today); // LLM: текст → tasks[]
+    const result = solve(parsed.tasks); // детермінований solver: tasks[] → розклад
+    return Response.json(result);
   } catch (e) {
     if (e instanceof ParseError) {
       return Response.json(
