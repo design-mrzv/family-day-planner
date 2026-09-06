@@ -1,4 +1,4 @@
-import { parseTasks, ParseError } from "@/lib/parser/parseTasks";
+import { parseTasks, ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { DATE_RE } from "@/lib/parser/schema";
 import { solve } from "@/lib/solver/solve";
 
@@ -35,6 +35,12 @@ export async function POST(request: Request) {
     const result = solve(parsed.tasks); // детермінований solver: tasks[] → розклад
     return Response.json(result);
   } catch (e) {
+    if (e instanceof ServiceError) {
+      return Response.json(
+        { error: "service_unavailable", message: "Сервіс тимчасово недоступний. Спробуй за хвилину." },
+        { status: 503 },
+      );
+    }
     if (e instanceof ParseError) {
       return Response.json(
         { error: "parse_failed", message: "Не вдалося розібрати текст. Спробуй ще раз." },
