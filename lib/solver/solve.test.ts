@@ -50,6 +50,12 @@ describe("solve", () => {
     expect(r.schedule[0].duration_min).toBe(30);
   });
 
+  it("'помити посуд' — окреме коротке правило (15 хв), не 45 як загальне прибирання", () => {
+    const r = solve([task("помити посуд")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(r.schedule[0].duration_min).toBe(15);
+  });
+
   it("справ на ~16 год, вікон на 15 → overflow непорожній, решта розкладена, нічого не втрачено", () => {
     const tasks = Array.from({ length: 40 }, (_, i) => task(`справа ${i}`));
     const r = solve(tasks);
