@@ -62,6 +62,12 @@ describe("solve", () => {
     expect(r.schedule[0].duration_min).toBe(15);
   });
 
+  it("'передзвонити' — теж 15хв дзвінка, не fallback 30", () => {
+    const r = solve([task("мамі передзвонити")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(r.schedule[0].duration_min).toBe(15);
+  });
+
   it("справ на ~16 год, вікон на 15 → overflow непорожній, решта розкладена, нічого не втрачено", () => {
     const tasks = Array.from({ length: 40 }, (_, i) => task(`справа ${i}`));
     const r = solve(tasks);
