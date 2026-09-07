@@ -68,6 +68,24 @@ describe("solve", () => {
     expect(r.schedule[0].duration_min).toBe(15);
   });
 
+  it("Етап 2: durationOverrides виграє над дефолтним словником", () => {
+    const overrides = new Map([["вечеря", 90]]);
+    const r = solve([task("вечеря")], overrides);
+    expect(r.schedule).toHaveLength(1);
+    expect(r.schedule[0].duration_min).toBe(90); // дефолт для 'вечеря' — 40
+  });
+
+  it("Етап 2: override застосовується без урахування регістру/пробілів (normalizeTaskKey)", () => {
+    const overrides = new Map([["полити квіти", 5]]);
+    const r = solve([task("  Полити Квіти  ")], overrides);
+    expect(r.schedule[0].duration_min).toBe(5);
+  });
+
+  it("Етап 2: без overrides (дефолтний параметр) — поведінка як на Етапі 1", () => {
+    const r = solve([task("вечеря")]);
+    expect(r.schedule[0].duration_min).toBe(40);
+  });
+
   it("справ на ~16 год, вікон на 15 → overflow непорожній, решта розкладена, нічого не втрачено", () => {
     const tasks = Array.from({ length: 40 }, (_, i) => task(`справа ${i}`));
     const r = solve(tasks);

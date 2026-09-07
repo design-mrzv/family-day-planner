@@ -8,10 +8,14 @@ import {
   toMin,
   toHHMM,
   durationFor,
+  normalizeTaskKey,
   ruleWindow,
   windowForHint,
   travelBufferFor,
 } from "./config";
+
+// Памʼять тривалостей (Етап 2): normalizeTaskKey(title) → хвилини. Порожня Map — як Етап 1.
+export type DurationOverrides = Map<string, number>;
 
 interface Interval {
   start: number;
@@ -45,8 +49,13 @@ function placeFlexible(lo: number, hi: number, d: number, occupied: Interval[]):
   return null;
 }
 
-// Детермінований розкладальник. Той самий вхід → той самий вихід.
-export function solve(tasks: Task[]): SolverResult {
+// Тривалість: спершу перевірена мамою правка (Етап 2), інакше дефолт зі словника.
+function resolveDuration(title: string, overrides: DurationOverrides): number {
+  return overrides.get(normalizeTaskKey(title)) ?? durationFor(title);
+}
+
+// Детермінований розкладальник. Той самий вхід (+ ті самі overrides) → той самий вихід.
+export function solve(tasks: Task[], durationOverrides: DurationOverrides = new Map()): SolverResult {
   const schedule: Scheduled[] = [];
   const overflow: OverflowItem[] = [];
   const deadlines: Deadline[] = [];
@@ -65,7 +74,7 @@ export function solve(tasks: Task[]): SolverResult {
   // 4. Фіксовані справи на свої місця + виявлення конфліктів (накладень).
   const fixedIvs = fixed.map((t) => {
     const start = toMin(t.fixed_time as string);
-    return { task: t, start, end: start + durationFor(t.title) };
+    return { task: t, start, end: start + resolveDuration(t.title, durationOverrides) };
   });
 
   const conflicted = new Set<number>();
@@ -98,7 +107,7 @@ export function solve(tasks: Task[]): SolverResult {
     // Ключове слово в title має пріоритет; time_hint від LLM — фолбек, коли слів нема.
     const rw = ruleWindow(t.title) ?? windowForHint(t.time_hint);
     const [lo, hi] = rw ?? [toMin(WORK_START), toMin(WORK_END)];
-    return { task: t, i, lo, hi, d: durationFor(t.title), constrained: rw != null };
+    return { task: t, i, lo, hi, d: resolveDuration(t.title, durationOverrides), constrained: rw != null };
   });
   meta.sort((a, b) => Number(b.constrained) - Number(a.constrained) || a.i - b.i);
 

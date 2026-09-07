@@ -47,6 +47,11 @@ export function durationFor(title: string): number {
   return DEFAULT_DURATION_MIN;
 }
 
+// Ключ для памʼяті тривалостей (Етап 2): нормалізована назва, точний збіг, без fuzzy.
+export function normalizeTaskKey(title: string): string {
+  return title.trim().toLowerCase();
+}
+
 // --- Додатковий буфер збори+дорога навколо справ, що вимагають виходу з дому ---
 // Тривалість справи — це сама подія; буфер — окремо, щоб сусідня справа не лізла впритул.
 const TRAVEL_BUFFER_RULES: [RegExp, number][] = [
