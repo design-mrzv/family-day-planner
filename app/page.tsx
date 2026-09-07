@@ -3,6 +3,12 @@
 import { useState } from "react";
 import type { SolverResult } from "@/lib/solver/types";
 
+// Парсер не впізнав жодної справи (сміття/емодзі/непов'язані слова) —
+// schedule/overflow/deadlines усі порожні одночасно.
+function isEmptyResult(r: SolverResult): boolean {
+  return r.schedule.length === 0 && r.overflow.length === 0 && r.deadlines.length === 0;
+}
+
 export default function Home() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,7 +57,13 @@ export default function Home() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {result && (
+      {result && isEmptyResult(result) && (
+        <p style={{ marginTop: 16 }}>
+          Здається, тут немає конкретних справ. Спробуй написати, що плануєш зробити завтра.
+        </p>
+      )}
+
+      {result && !isEmptyResult(result) && (
         <div style={{ marginTop: 16, maxWidth: 600 }}>
           <h2>Розклад</h2>
           {result.schedule.length === 0 ? (
