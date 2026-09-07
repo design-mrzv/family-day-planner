@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeRoutine, type PlanRow } from "./routine";
+import { computeRoutine, computePrefill, type PlanRow } from "./routine";
 
 const day = (date: string, ...titles: string[]): PlanRow => ({
   date,
@@ -54,5 +54,32 @@ describe("computeRoutine", () => {
     const plans = [day("2026-09-05", "йога"), day("2026-09-06", "йога"), day("2026-09-07", "йога")];
     expect(computeRoutine(plans, 3)).toBe("йога");
     expect(computeRoutine(plans, 4)).toBe("");
+  });
+});
+
+describe("computePrefill", () => {
+  it("порожня історія → порожній рядок", () => {
+    expect(computePrefill([])).toBe("");
+  });
+
+  it("переносить усе з останнього дня + додає рутину без дублів", () => {
+    // Найсвіжіший день першим. садок — і вчора, і рутинний; вечеря — рутина; лікар — лише вчора.
+    const plans = [
+      day("2026-09-07", "садок", "лікар"), // останній день (переноситься весь)
+      day("2026-09-06", "садок", "вечеря"),
+      day("2026-09-05", "садок", "вечеря"),
+    ];
+    // carry: садок, лікар; routine (≥2): садок(3), вечеря(2) → додається лише вечеря
+    expect(computePrefill(plans)).toBe("садок, лікар, вечеря");
+  });
+
+  it("перенесене (moved) з останнього дня теж потрапляє в заготовку", () => {
+    const plans: PlanRow[] = [
+      {
+        date: "2026-09-07",
+        tasks: { schedule: [{ title: "погуляти", status: "moved" }], overflow: [] },
+      },
+    ];
+    expect(computePrefill(plans)).toBe("погуляти");
   });
 });

@@ -42,3 +42,38 @@ export function computeRoutine(plans: PlanRow[], threshold = 2): string {
     .map((s) => s.lastTitle)
     .join(", ");
 }
+
+// Унікальні назви одного дня (schedule+overflow) у порядку появи, дедуп по ключу.
+function uniqueTitles(plan: PlanRow): string[] {
+  const t = plan.tasks as { schedule?: { title: string }[]; overflow?: { title: string }[] };
+  const titles = [...(t?.schedule ?? []), ...(t?.overflow ?? [])].map((x) => x.title);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const title of titles) {
+    const key = normalizeTaskKey(title);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(title);
+  }
+  return out;
+}
+
+// Заготовка на завтра: усе незакрите з останнього дня (падає мовчки, крок 4 спеку)
+// + рутинні справи, обʼєднані з дедуплікацією за назвою. plans — від найновішого.
+export function computePrefill(plans: PlanRow[], threshold = 2): string {
+  if (plans.length === 0) return "";
+
+  const carry = uniqueTitles(plans[0]); // найсвіжіший день першим
+  const routine = computeRoutine(plans, threshold);
+  const routineTitles = routine ? routine.split(", ") : [];
+
+  const seen = new Set(carry.map(normalizeTaskKey));
+  const merged = [...carry];
+  for (const title of routineTitles) {
+    const key = normalizeTaskKey(title);
+    if (seen.has(key)) continue; // уже є серед перенесених — не дублюємо
+    seen.add(key);
+    merged.push(title);
+  }
+  return merged.join(", ");
+}

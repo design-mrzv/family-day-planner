@@ -7,6 +7,8 @@ export interface Scheduled {
   start: string; // "HH:MM"
   duration_min: number;
   type: ScheduledType;
+  // Етап 2: "→ завтра" (крок 4 спеку). Solver ніколи не ставить; лише збереження/UI.
+  status?: "moved";
 }
 
 export type OverflowReason = "no_slot" | "conflict";

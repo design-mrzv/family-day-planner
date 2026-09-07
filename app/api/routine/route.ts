@@ -2,12 +2,12 @@ import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth/getSession";
 import { db } from "@/lib/db/client";
 import { dailyPlans } from "@/lib/db/schema";
-import { computeRoutine, type PlanRow } from "@/lib/routine";
+import { computePrefill, type PlanRow } from "@/lib/routine";
 
 export const runtime = "nodejs";
 
-// Заготовка рутинних справ для textarea на день 2+: назви, що повторювались
-// у ≥2 з останніх 7 збережених днів. Детерміновано, без LLM.
+// Заготовка для textarea на день 2+: незакрите з останнього дня (крок 4 спеку)
+// + рутинні справи (≥2 з останніх 7 днів), дедуп за назвою. Детерміновано, без LLM.
 export async function GET() {
   const session = await getSession();
   if (!session) {
@@ -21,6 +21,6 @@ export async function GET() {
     .orderBy(desc(dailyPlans.date))
     .limit(7);
 
-  const prefill = computeRoutine(rows as PlanRow[]);
+  const prefill = computePrefill(rows as PlanRow[]);
   return Response.json({ prefill });
 }

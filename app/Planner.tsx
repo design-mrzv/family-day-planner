@@ -17,6 +17,7 @@ export default function Planner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SolverResult | null>(null);
+  const [planDate, setPlanDate] = useState<string | null>(null);
   const [routineHint, setRoutineHint] = useState(false);
 
   // Памʼять рутини: на день 2+ підставляємо звичні справи в порожнє поле,
@@ -56,6 +57,7 @@ export default function Planner() {
         setError(data?.message ?? "Помилка.");
         return;
       }
+      setPlanDate(today);
       setResult(data as SolverResult);
     } catch {
       setError("Мережа недоступна. Спробуй ще раз.");
@@ -67,6 +69,17 @@ export default function Planner() {
   async function onLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.refresh();
+  }
+
+  // "→ завтра": прибрати справу з сьогодні. Вона повернеться в завтрашній заготовці.
+  async function onMoveToTomorrow(title: string) {
+    if (!planDate) return;
+    const res = await fetch("/api/plan/move", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date: planDate, title }),
+    });
+    if (res.ok) setResult((await res.json()) as SolverResult);
   }
 
   return (
@@ -108,17 +121,27 @@ export default function Planner() {
       {result && !isEmptyResult(result) && (
         <div style={{ marginTop: 16, maxWidth: 600 }}>
           <h2>Розклад</h2>
-          {result.schedule.length === 0 ? (
+          {result.schedule.filter((s) => s.status !== "moved").length === 0 ? (
             <p>Порожньо.</p>
           ) : (
             <ul>
-              {result.schedule.map((s, i) => (
-                <li key={i}>
-                  <b>{s.start}</b> — {s.title}
-                  <DurationEditor title={s.title} durationMin={s.duration_min} onSaved={onPlan} />{" "}
-                  {s.type === "fixed" ? "[фіксовано]" : ""}
-                </li>
-              ))}
+              {result.schedule
+                .filter((s) => s.status !== "moved")
+                .map((s) => (
+                  <li key={`${s.start}-${s.title}`}>
+                    <b>{s.start}</b> — {s.title}
+                    <DurationEditor
+                      key={s.duration_min}
+                      title={s.title}
+                      durationMin={s.duration_min}
+                      onSaved={onPlan}
+                    />{" "}
+                    {s.type === "fixed" ? "[фіксовано]" : ""}
+                    <button onClick={() => onMoveToTomorrow(s.title)} style={{ marginLeft: 8 }}>
+                      → завтра
+                    </button>
+                  </li>
+                ))}
             </ul>
           )}
 
@@ -126,10 +149,16 @@ export default function Planner() {
             <>
               <h2>Не влізло сьогодні</h2>
               <ul>
-                {result.overflow.map((o, i) => (
-                  <li key={i}>
+                {result.overflow.map((o) => (
+                  <li key={`${o.title}-${o.reason}`}>
                     {o.title}
-                    <DurationEditor title={o.title} durationMin={o.duration_min} onSaved={onPlan} /> —{" "}
+                    <DurationEditor
+                      key={o.duration_min}
+                      title={o.title}
+                      durationMin={o.duration_min}
+                      onSaved={onPlan}
+                    />{" "}
+                    —{" "}
                     {o.reason === "conflict" ? "конфлікт часу" : "немає місця"}
                   </li>
                 ))}
