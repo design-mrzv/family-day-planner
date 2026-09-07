@@ -19,34 +19,35 @@ export default function Planner() {
   const [result, setResult] = useState<SolverResult | null>(null);
   const [planDate, setPlanDate] = useState<string | null>(null);
   const [routineHint, setRoutineHint] = useState(false);
+  // Для тесту гейту Етапу 2: підставити дату вручну, щоб «прожити» 7 днів за сеанс.
+  const [dateOverride, setDateOverride] = useState(() => new Date().toLocaleDateString("sv-SE"));
 
-  // Памʼять рутини: на день 2+ підставляємо звичні справи в порожнє поле,
-  // щоб мама не писала рутину з нуля. Не перезаписуємо, якщо вона вже щось ввела.
-  useEffect(() => {
-    let active = true;
+  // Памʼять рутини: підставляє звичні справи + перенесене в поле.
+  // force=false (на відкритті) не перезаписує введене; force=true (кнопка) заповнює завжди.
+  function loadRoutine(force: boolean) {
     fetch("/api/routine")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (active && data?.prefill) {
-          setText((cur) => {
-            if (cur.trim() !== "") return cur;
-            setRoutineHint(true);
-            return data.prefill;
-          });
-        }
+        if (!data?.prefill) return;
+        setText((cur) => {
+          if (!force && cur.trim() !== "") return cur;
+          setRoutineHint(true);
+          return data.prefill;
+        });
       })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
+      .catch(() => {
+        /* мовчки — заготовка не критична */
+      });
+  }
+
+  useEffect(() => loadRoutine(false), []);
 
   async function onPlan() {
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+      const today = dateOverride; // YYYY-MM-DD (за замовчуванням — сьогодні; для тесту редагується)
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -109,6 +110,21 @@ export default function Planner() {
       <button onClick={onPlan} disabled={loading || text.trim() === ""} style={{ marginTop: 8 }}>
         {loading ? "Розкладаю…" : "Розкласти"}
       </button>
+
+      <div style={{ marginTop: 12, fontSize: "0.85em", color: "#444" }}>
+        <label>
+          дата (для тесту гейту):{" "}
+          <input
+            type="date"
+            value={dateOverride}
+            onChange={(e) => setDateOverride(e.target.value)}
+            style={{ fontFamily: "inherit" }}
+          />
+        </label>{" "}
+        <button type="button" onClick={() => loadRoutine(true)}>
+          ↻ підставити заготовку з памʼяті
+        </button>
+      </div>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
