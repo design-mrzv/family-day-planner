@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SolverResult } from "@/lib/solver/types";
+import DurationEditor from "./DurationEditor";
 
 // Парсер не впізнав жодної справи (сміття/емодзі/непов'язані слова) —
 // schedule/overflow/deadlines усі порожні одночасно.
@@ -82,7 +83,8 @@ export default function Planner() {
             <ul>
               {result.schedule.map((s, i) => (
                 <li key={i}>
-                  <b>{s.start}</b> — {s.title} ({s.duration_min} хв){" "}
+                  <b>{s.start}</b> — {s.title}
+                  <DurationEditor title={s.title} durationMin={s.duration_min} onSaved={onPlan} />{" "}
                   {s.type === "fixed" ? "[фіксовано]" : ""}
                 </li>
               ))}
@@ -95,7 +97,8 @@ export default function Planner() {
               <ul>
                 {result.overflow.map((o, i) => (
                   <li key={i}>
-                    {o.title} ({o.duration_min} хв) —{" "}
+                    {o.title}
+                    <DurationEditor title={o.title} durationMin={o.duration_min} onSaved={onPlan} /> —{" "}
                     {o.reason === "conflict" ? "конфлікт часу" : "немає місця"}
                   </li>
                 ))}
