@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { SolverResult } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
@@ -17,6 +17,28 @@ export default function Planner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SolverResult | null>(null);
+  const [routineHint, setRoutineHint] = useState(false);
+
+  // Памʼять рутини: на день 2+ підставляємо звичні справи в порожнє поле,
+  // щоб мама не писала рутину з нуля. Не перезаписуємо, якщо вона вже щось ввела.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/routine")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.prefill) {
+          setText((cur) => {
+            if (cur.trim() !== "") return cur;
+            setRoutineHint(true);
+            return data.prefill;
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function onPlan() {
     setLoading(true);
@@ -55,9 +77,18 @@ export default function Planner() {
       </div>
       <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
 
+      {routineHint && (
+        <p style={{ fontSize: "0.85em" }}>
+          Підставили твої звичні справи — прибери зайве, додай унікальне.
+        </p>
+      )}
+
       <textarea
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          setRoutineHint(false);
+        }}
         rows={6}
         style={{ width: "100%", maxWidth: 600, display: "block", fontFamily: "inherit" }}
         placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
