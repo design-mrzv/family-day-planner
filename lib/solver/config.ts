@@ -83,3 +83,12 @@ export function ruleWindow(title: string): [number, number] | null {
   for (const [test, lo, hi] of RULE_WINDOWS) if (test(title)) return [toMin(lo), toMin(hi)];
   return null;
 }
+
+// Фолбек, коли title не зловив жодного ключового слова, але LLM зафіксував явний
+// текстовий маркер часу доби ("зранку", "ввечері" тощо) — сигнал з тексту, не вгадування.
+export function windowForHint(hint: "morning" | "afternoon" | "evening" | null): [number, number] | null {
+  if (hint === "morning") return [toMin(WORK_START), toMin("12:00")];
+  if (hint === "afternoon") return [toMin("12:00"), toMin("17:00")];
+  if (hint === "evening") return [toMin("18:00"), toMin(WORK_END)];
+  return null;
+}

@@ -21,13 +21,29 @@ describe("validateOutput", () => {
   it("приймає валідний вивід з усіма варіантами полів", () => {
     const parsed = validateOutput(
       ok([
-        { title: "тренування", fixed_time: null, deadline: null },
-        { title: "забрати старшого", fixed_time: "15:00", deadline: null },
-        { title: "оплатити садок", fixed_time: null, deadline: "2026-09-08" },
+        { title: "тренування", fixed_time: null, deadline: null, time_hint: null },
+        { title: "забрати старшого", fixed_time: "15:00", deadline: null, time_hint: null },
+        { title: "оплатити садок", fixed_time: null, deadline: "2026-09-08", time_hint: null },
+        { title: "щось приготувати", fixed_time: null, deadline: null, time_hint: "evening" },
       ]),
     );
-    expect(parsed.tasks).toHaveLength(3);
+    expect(parsed.tasks).toHaveLength(4);
     expect(parsed.tasks[1].fixed_time).toBe("15:00");
+    expect(parsed.tasks[3].time_hint).toBe("evening");
+  });
+
+  it("відхиляє невалідне значення time_hint", () => {
+    expect(() =>
+      validateOutput(
+        ok([{ title: "х", fixed_time: null, deadline: null, time_hint: "night" }]),
+      ),
+    ).toThrow();
+  });
+
+  it("відхиляє відсутнє поле time_hint (strict-схема вимагає його явно)", () => {
+    expect(() =>
+      validateOutput(ok([{ title: "х", fixed_time: null, deadline: null }])),
+    ).toThrow();
   });
 
   it("приймає порожній список справ", () => {

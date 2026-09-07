@@ -3,10 +3,16 @@ import { solve } from "./solve";
 import { toMin } from "./config";
 import type { Task } from "../parser/schema";
 
-const task = (title: string, fixed_time: string | null = null, deadline: string | null = null): Task => ({
+const task = (
+  title: string,
+  fixed_time: string | null = null,
+  deadline: string | null = null,
+  time_hint: Task["time_hint"] = null,
+): Task => ({
   title,
   fixed_time,
   deadline,
+  time_hint,
 });
 
 // Інваріант: у розкладі жодні дві справи не накладаються.
@@ -155,6 +161,19 @@ describe("solve", () => {
     const r = solve([task("почитати книгу перед сном")]);
     expect(r.schedule).toHaveLength(1);
     expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(toMin("18:00"));
+  });
+
+  it("time_hint='evening' від LLM (нема ключового слова в title) — теж ввечері", () => {
+    const r = solve([task("щось приготувати", null, null, "evening")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(toMin("18:00"));
+  });
+
+  it("ключове слово в title має пріоритет над time_hint при розбіжності", () => {
+    // "тренування" за ключовим словом → зранку (до 12:00), навіть якщо LLM помилково дав evening.
+    const r = solve([task("тренування", null, null, "evening")]);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBeLessThan(toMin("12:00"));
   });
 
   it("реалістичний змішаний день: без накладень, фіксовані на місці", () => {

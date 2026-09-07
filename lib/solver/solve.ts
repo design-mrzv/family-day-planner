@@ -9,6 +9,7 @@ import {
   toHHMM,
   durationFor,
   ruleWindow,
+  windowForHint,
   travelBufferFor,
 } from "./config";
 
@@ -94,7 +95,8 @@ export function solve(tasks: Task[]): SolverResult {
   // 5. Гнучкі справи у вільні вікна, поважаючи правила + буфери.
   //    Спершу справи з правилом (вужче вікно), потім решта — у порядку вводу.
   const meta = flexible.map((t, i) => {
-    const rw = ruleWindow(t.title);
+    // Ключове слово в title має пріоритет; time_hint від LLM — фолбек, коли слів нема.
+    const rw = ruleWindow(t.title) ?? windowForHint(t.time_hint);
     const [lo, hi] = rw ?? [toMin(WORK_START), toMin(WORK_END)];
     return { task: t, i, lo, hi, d: durationFor(t.title), constrained: rw != null };
   });
