@@ -5,6 +5,21 @@ import { pgTable, uuid, text, timestamp, date, jsonb, integer, unique } from "dr
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  // Етап 3: другий ідентифікатор, привʼязується через deep-link код (telegram_link_codes).
+  telegramChatId: text("telegram_chat_id").unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Одноразовий код прив'язки Telegram: веб-сесія генерує код → deep-link t.me/bot?start=код →
+// бот отримує /start код → знаходить цей рядок → пише telegram_chat_id в users.
+export const telegramLinkCodes = pgTable("telegram_link_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  code: text("code").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

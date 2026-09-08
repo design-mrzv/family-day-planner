@@ -8,6 +8,13 @@
       "when": 1788749251305,
       "tag": "0000_lyrical_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788837601985,
+      "tag": "0001_woozy_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }
