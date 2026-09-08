@@ -80,6 +80,14 @@ describe("resolveTimezone", () => {
     expect(resolveTimezone("Україна")).toBe("Europe/Kyiv");
   });
 
+  it("столиця кирилицею впізнається, навіть якщо латиницею вона й так у IANA (Берлін)", () => {
+    // "Berlin" (латиницею) сам знайшовся б через пошук по IANA-містах; кирилична "Берлін"/
+    // "Берлин" — ні (посимвольний збіг не переступає скрипти), тому потрібен окремий аліас.
+    expect(resolveTimezone("Берлін")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Берлин")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Berlin")).toBe("Europe/Berlin"); // латиницею й так працює (контроль)
+  });
+
   it("Intl сам знає деякі застарілі аліаси країн (Poland→Europe/Warsaw) — приймаються як є", () => {
     // isValidTimezone("Poland") вже true (ICU legacy-посилання), тож повертається без
     // нормалізації — це коректно: реально резолвиться в Europe/Warsaw при форматуванні.
