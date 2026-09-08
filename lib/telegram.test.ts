@@ -72,6 +72,30 @@ describe("resolveTimezone", () => {
     expect(resolveTimezone("Малага")).toBe("Europe/Madrid");
   });
 
+  it("рівень країни: одна назва покриває всі міста цієї країни (Frankfurt сам не в базі)", () => {
+    expect(resolveTimezone("Frankfurt")).toBeNull(); // не впізнане місто, і не в аліасах
+    expect(resolveTimezone("Germany")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Німеччина")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Deutschland")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Україна")).toBe("Europe/Kyiv");
+  });
+
+  it("Intl сам знає деякі застарілі аліаси країн (Poland→Europe/Warsaw) — приймаються як є", () => {
+    // isValidTimezone("Poland") вже true (ICU legacy-посилання), тож повертається без
+    // нормалізації — це коректно: реально резолвиться в Europe/Warsaw при форматуванні.
+    const resolved = resolveTimezone("Poland")!;
+    const probe = new Date("2026-06-15T12:00:00Z");
+    const viaResolved = new Intl.DateTimeFormat("en-US", { timeZone: resolved, hourCycle: "h23", hour: "numeric" }).format(probe);
+    const viaCanonical = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Warsaw", hourCycle: "h23", hour: "numeric" }).format(probe);
+    expect(viaResolved).toBe(viaCanonical);
+  });
+
+  it("багатозонні країни свідомо НЕ мають аліасу країни — нема єдиної правильної відповіді", () => {
+    expect(resolveTimezone("USA")).toBeNull();
+    expect(resolveTimezone("Canada")).toBeNull();
+    expect(resolveTimezone("Australia")).toBeNull();
+  });
+
   it("зсув від UTC як фолбек, коли місто взагалі не впізнано", () => {
     expect(resolveTimezone("+2")).toBe("Etc/GMT-2"); // IANA: знак інвертований
     expect(resolveTimezone("-5")).toBe("Etc/GMT+5");
