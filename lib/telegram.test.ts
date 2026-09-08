@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dateStringInTz, isValidTimezone, formatScheduleMessage } from "./telegram";
+import { dateStringInTz, isValidTimezone, resolveTimezone, formatScheduleMessage } from "./telegram";
 import type { SolverResult } from "./solver/types";
 
 describe("dateStringInTz", () => {
@@ -34,6 +34,36 @@ describe("isValidTimezone", () => {
     expect(isValidTimezone("не пояс")).toBe(false);
     expect(isValidTimezone("")).toBe(false);
     expect(isValidTimezone("Mars/Phobos")).toBe(false);
+  });
+});
+
+describe("resolveTimezone", () => {
+  it("приймає повну IANA-назву як є", () => {
+    expect(resolveTimezone("America/Chicago")).toBe("America/Chicago");
+  });
+
+  it("розпізнає англійську назву міста", () => {
+    expect(resolveTimezone("Chicago")).toBe("America/Chicago");
+    expect(resolveTimezone("chicago")).toBe("America/Chicago"); // регістр не важливий
+  });
+
+  it("український аліас: будь-яке велике місто України → Europe/Kyiv", () => {
+    expect(resolveTimezone("Чикаго")).toBeNull(); // кирилицею не в базі IANA — лише аліаси
+    expect(resolveTimezone("Київ")).toBe("Europe/Kyiv");
+    expect(resolveTimezone("київ")).toBe("Europe/Kyiv");
+    expect(resolveTimezone("Львів")).toBe("Europe/Kyiv");
+    expect(resolveTimezone("Kyiv")).toBe("Europe/Kyiv");
+    expect(resolveTimezone("Kiev")).toBe("Europe/Kyiv"); // стара назва
+  });
+
+  it("не вгадує — незнайоме місто повертає null, а не приблизний варіант", () => {
+    expect(resolveTimezone("Атлантида")).toBeNull();
+    expect(resolveTimezone("")).toBeNull();
+    expect(resolveTimezone("   ")).toBeNull();
+  });
+
+  it("пробіл у назві міста нормалізується в підкреслення (як в IANA)", () => {
+    expect(resolveTimezone("New York")).toBe("America/New_York");
   });
 });
 

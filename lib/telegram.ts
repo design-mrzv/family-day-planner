@@ -80,3 +80,43 @@ export function isValidTimezone(timezone: string): boolean {
     return false;
   }
 }
+
+// Найчастіші міста, які по-різному пишуться в IANA (Україна — суцільно Europe/Kyiv,
+// стара назва "Kiev" теж трапляється) або їх немає в базі як окремого запису.
+const CITY_ALIASES: Record<string, string> = {
+  "київ": "Europe/Kyiv",
+  kyiv: "Europe/Kyiv",
+  kiev: "Europe/Kyiv",
+  "львів": "Europe/Kyiv",
+  lviv: "Europe/Kyiv",
+  "одеса": "Europe/Kyiv",
+  odesa: "Europe/Kyiv",
+  odessa: "Europe/Kyiv",
+  "харків": "Europe/Kyiv",
+  kharkiv: "Europe/Kyiv",
+  "дніпро": "Europe/Kyiv",
+  dnipro: "Europe/Kyiv",
+  "запоріжжя": "Europe/Kyiv",
+  zaporizhzhia: "Europe/Kyiv",
+  "вінниця": "Europe/Kyiv",
+  vinnytsia: "Europe/Kyiv",
+};
+
+// Приймає довільний ввід — повну IANA-назву ("America/Chicago") або просто місто
+// ("Чикаго"/"Chicago") — і повертає канонічний IANA-рядок, або null, якщо не впізнала
+// (нема сенсу вгадувати навмання: краще перепитати, ніж мовчки взяти не той пояс).
+export function resolveTimezone(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (isValidTimezone(trimmed)) return trimmed;
+
+  const key = trimmed.toLowerCase();
+  if (CITY_ALIASES[key]) return CITY_ALIASES[key];
+
+  const normalized = key.replace(/\s+/g, "_");
+  const matches = Intl.supportedValuesOf("timeZone").filter((zone) => {
+    const city = zone.slice(zone.lastIndexOf("/") + 1).toLowerCase();
+    return city === normalized;
+  });
+  return matches.length === 1 ? matches[0] : null;
+}

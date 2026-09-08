@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, telegramLinkCodes } from "@/lib/db/schema";
-import { sendMessage, dateStringInTz, isValidTimezone } from "@/lib/telegram";
+import { sendMessage, dateStringInTz, resolveTimezone } from "@/lib/telegram";
 import { planAndSaveDay } from "@/lib/planDay";
 import { ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { isEmptyResult } from "@/lib/solver/types";
@@ -46,13 +46,14 @@ async function handleStart(chatId: string, code: string, origin: string): Promis
   await sendMessage(
     chatId,
     "✅ Готово! Тепер щовечора питатиму, що на завтра, а вранці надсилатиму розклад.\n\n" +
-      "Якщо живеш не за київським часом — напиши /timezone Europe/Kyiv (заміни на свій IANA-пояс, " +
-      "напр. America/Chicago), інакше 'завтра' рахуватиметься неправильно.\n\n" +
+      "Якщо живеш не за київським часом — напиши /timezone і назва міста (напр. /timezone Чикаго), " +
+      "інакше 'завтра' рахуватиметься неправильно.\n\n" +
       `Керувати планами можна й на сайті: ${origin}`,
   );
 }
 
-// /timezone <IANA-пояс> — явно, без вгадування (Telegram не передає TZ користувача).
+// /timezone <місто або IANA-пояс> — явно, без вгадування (Telegram не передає TZ
+// користувача). Приймає просто назву міста ("Чикаго"/"Chicago") — не треба знати формат.
 async function handleTimezone(chatId: string, arg: string): Promise<void> {
   const [user] = await db.select().from(users).where(eq(users.telegramChatId, chatId)).limit(1);
   if (!user) {
@@ -63,19 +64,19 @@ async function handleTimezone(chatId: string, arg: string): Promise<void> {
   if (!arg) {
     await sendMessage(
       chatId,
-      `Твій поточний часовий пояс: ${user.timezone}.\n` +
-        "Щоб змінити: /timezone Europe/Kyiv (або інший IANA-рядок, напр. America/Chicago).",
+      `Твій поточний часовий пояс: ${user.timezone}.\n` + "Щоб змінити: /timezone і назва міста, напр. /timezone Чикаго.",
     );
     return;
   }
 
-  if (!isValidTimezone(arg)) {
-    await sendMessage(chatId, `Не впізнала пояс "${arg}". Приклади: Europe/Kyiv, America/Chicago, Europe/Warsaw.`);
+  const resolved = resolveTimezone(arg);
+  if (!resolved) {
+    await sendMessage(chatId, `Не впізнала місто "${arg}". Спробуй англійською або більше велике місто поруч.`);
     return;
   }
 
-  await db.update(users).set({ timezone: arg }).where(eq(users.id, user.id));
-  await sendMessage(chatId, `Готово, часовий пояс тепер ${arg}.`);
+  await db.update(users).set({ timezone: resolved }).where(eq(users.id, user.id));
+  await sendMessage(chatId, `Готово, часовий пояс тепер ${resolved}.`);
 }
 
 async function handleTaskText(chatId: string, text: string): Promise<void> {
