@@ -71,7 +71,11 @@ async function handleTimezone(chatId: string, arg: string): Promise<void> {
 
   const resolved = resolveTimezone(arg);
   if (!resolved) {
-    await sendMessage(chatId, `Не впізнала місто "${arg}". Спробуй англійською або більше велике місто поруч.`);
+    await sendMessage(
+      chatId,
+      `Не впізнала місто "${arg}". Спробуй англійською, більше велике місто поруч,\n` +
+        "або просто різницю з UTC, напр. /timezone +2.",
+    );
     return;
   }
 

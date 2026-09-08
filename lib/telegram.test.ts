@@ -65,6 +65,35 @@ describe("resolveTimezone", () => {
   it("пробіл у назві міста нормалізується в підкреслення (як в IANA)", () => {
     expect(resolveTimezone("New York")).toBe("America/New_York");
   });
+
+  it("країни з одним поясом на всю країну: місто, якого нема в IANA окремо — з аліасу", () => {
+    // Іспанія — суцільно Europe/Madrid, IANA не знає "Valencia"/"Malaga" як окремі зони.
+    expect(resolveTimezone("Valencia")).toBe("Europe/Madrid");
+    expect(resolveTimezone("Малага")).toBe("Europe/Madrid");
+  });
+
+  it("зсув від UTC як фолбек, коли місто взагалі не впізнано", () => {
+    expect(resolveTimezone("+2")).toBe("Etc/GMT-2"); // IANA: знак інвертований
+    expect(resolveTimezone("-5")).toBe("Etc/GMT+5");
+    expect(resolveTimezone("UTC+2")).toBe("Etc/GMT-2");
+    expect(resolveTimezone("gmt-5")).toBe("Etc/GMT+5");
+    expect(resolveTimezone("+0")).toBe("Etc/UTC");
+  });
+
+  it("двоцифровий зсув Intl приймає напряму як власний ідентифікатор (не через наш фолбек)", () => {
+    // "+15" — синтаксично валідний ICU fixed-offset zone; повертається як є першою ж
+    // перевіркою isValidTimezone(), до того, як дійде до resolveUtcOffset().
+    expect(resolveTimezone("+15")).toBe("+15");
+  });
+
+  it("Etc/GMT-2 реально дає UTC+2 (перевірка інверсії знаку не лише рядком)", () => {
+    const zone = resolveTimezone("+2")!;
+    const probe = new Date("2026-06-15T12:00:00Z"); // літо — без сюрпризів DST
+    const local = new Intl.DateTimeFormat("en-US", { timeZone: zone, hour: "numeric", hourCycle: "h23" }).format(
+      probe,
+    );
+    expect(local).toBe("14"); // 12:00 UTC + 2 = 14:00
+  });
 });
 
 describe("formatScheduleMessage", () => {

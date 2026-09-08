@@ -100,11 +100,35 @@ const CITY_ALIASES: Record<string, string> = {
   zaporizhzhia: "Europe/Kyiv",
   "вінниця": "Europe/Kyiv",
   vinnytsia: "Europe/Kyiv",
+  // Іспанія — теж один пояс на всю країну (крім Канарських), IANA знає лише Madrid.
+  "валенсія": "Europe/Madrid",
+  valencia: "Europe/Madrid",
+  "малага": "Europe/Madrid",
+  malaga: "Europe/Madrid",
+  "барселона": "Europe/Madrid",
+  barcelona: "Europe/Madrid",
+  "севілья": "Europe/Madrid",
+  sevilla: "Europe/Madrid",
+  seville: "Europe/Madrid",
 };
 
-// Приймає довільний ввід — повну IANA-назву ("America/Chicago") або просто місто
-// ("Чикаго"/"Chicago") — і повертає канонічний IANA-рядок, або null, якщо не впізнала
-// (нема сенсу вгадувати навмання: краще перепитати, ніж мовчки взяти не той пояс).
+// "+2", "-5", "UTC+2", "GMT-5" → Etc/GMT∓N (в IANA цей запис історично з ІНВЕРТОВАНИМ
+// знаком — Etc/GMT-2 це UTC+2). Фолбек, що працює для будь-якого міста на Землі, коли
+// назва не впізнана — не тримати ж список усіх міст світу вручну.
+function resolveUtcOffset(input: string): string | null {
+  const m = /^(?:utc|gmt)?\s*([+-])\s*(\d{1,2})$/i.exec(input);
+  if (!m) return null;
+  const hours = Number(m[2]);
+  if (hours > 14) return null; // немає таких поясів
+  if (hours === 0) return "Etc/UTC";
+  const inverted = m[1] === "+" ? "-" : "+";
+  return `Etc/GMT${inverted}${hours}`;
+}
+
+// Приймає довільний ввід — повну IANA-назву ("America/Chicago"), просто місто
+// ("Чикаго"/"Chicago") або зсув від UTC ("+2") — і повертає канонічний IANA-рядок,
+// або null, якщо не впізнала (нема сенсу вгадувати навмання: краще перепитати,
+// ніж мовчки взяти не той пояс).
 export function resolveTimezone(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
@@ -112,6 +136,9 @@ export function resolveTimezone(input: string): string | null {
 
   const key = trimmed.toLowerCase();
   if (CITY_ALIASES[key]) return CITY_ALIASES[key];
+
+  const offset = resolveUtcOffset(trimmed);
+  if (offset) return offset;
 
   const normalized = key.replace(/\s+/g, "_");
   const matches = Intl.supportedValuesOf("timeZone").filter((zone) => {
