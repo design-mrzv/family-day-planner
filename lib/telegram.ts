@@ -1,3 +1,5 @@
+import type { SolverResult } from "./solver/types";
+
 // Мінімальна обгортка над Telegram Bot API. Без SDK — двом функціям бібліотека не потрібна.
 
 export const BOT_USERNAME = "familydayplannerbot";
@@ -28,6 +30,34 @@ export async function setWebhook(url: string, secretToken: string): Promise<unkn
     body: JSON.stringify({ url, secret_token: secretToken }),
   });
   return res.json();
+}
+
+// Ранкова видача: план текстом для Telegram (plain text, без markdown).
+export function formatScheduleMessage(result: SolverResult): string {
+  const lines = ["Доброго ранку! Ось твій план на сьогодні:", ""];
+
+  const visible = result.schedule.filter((s) => s.status !== "moved");
+  if (visible.length === 0) {
+    lines.push("Порожньо.");
+  } else {
+    for (const s of visible) {
+      lines.push(`${s.start} — ${s.title} (${s.duration_min} хв)${s.type === "fixed" ? " [фіксовано]" : ""}`);
+    }
+  }
+
+  if (result.overflow.length > 0) {
+    lines.push("", "Не влізло сьогодні:");
+    for (const o of result.overflow) {
+      lines.push(`- ${o.title} (${o.duration_min} хв) — ${o.reason === "conflict" ? "конфлікт часу" : "немає місця"}`);
+    }
+  }
+
+  if (result.deadlines.length > 0) {
+    lines.push("", "Дедлайни:");
+    for (const d of result.deadlines) lines.push(`- ${d.title} — до ${d.date}`);
+  }
+
+  return lines.join("\n");
 }
 
 // Поточна дата в Europe/Kyiv (не сервера — Vercel serverless працює в UTC).
