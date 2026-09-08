@@ -48,7 +48,7 @@ describe("resolveTimezone", () => {
   });
 
   it("український аліас: будь-яке велике місто України → Europe/Kyiv", () => {
-    expect(resolveTimezone("Чикаго")).toBeNull(); // кирилицею не в базі IANA — лише аліаси
+    expect(resolveTimezone("Атлантида")).toBeNull(); // вигадане місто — і досі не в базі
     expect(resolveTimezone("Київ")).toBe("Europe/Kyiv");
     expect(resolveTimezone("київ")).toBe("Europe/Kyiv");
     expect(resolveTimezone("Львів")).toBe("Europe/Kyiv");
@@ -72,12 +72,39 @@ describe("resolveTimezone", () => {
     expect(resolveTimezone("Малага")).toBe("Europe/Madrid");
   });
 
-  it("рівень країни: одна назва покриває всі міста цієї країни (Frankfurt сам не в базі)", () => {
-    expect(resolveTimezone("Frankfurt")).toBeNull(); // не впізнане місто, і не в аліасах
+  it("рівень країни: покриває міста, для яких нема окремого аліасу", () => {
+    expect(resolveTimezone("Дуйсбург")).toBeNull(); // не впізнане місто, і не в аліасах
     expect(resolveTimezone("Germany")).toBe("Europe/Berlin");
     expect(resolveTimezone("Німеччина")).toBe("Europe/Berlin");
     expect(resolveTimezone("Deutschland")).toBe("Europe/Berlin");
     expect(resolveTimezone("Україна")).toBe("Europe/Kyiv");
+  });
+
+  it("Frankfurt/Мюнхен — конкретний аліас (не лише через рівень країни)", () => {
+    expect(resolveTimezone("Frankfurt")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Франкфурт")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Munich")).toBe("Europe/Berlin");
+    expect(resolveTimezone("Мюнхен")).toBe("Europe/Berlin");
+  });
+
+  it("великі міста США без власного запису в IANA — однозначні, на відміну від country-рівня", () => {
+    expect(resolveTimezone("Houston")).toBe("America/Chicago");
+    expect(resolveTimezone("Miami")).toBe("America/New_York");
+    expect(resolveTimezone("Seattle")).toBe("America/Los_Angeles");
+    expect(resolveTimezone("Маямі")).toBe("America/New_York");
+  });
+
+  it("кирилична форма міст, які латиницею вже в IANA (Чикаго, Сідней)", () => {
+    expect(resolveTimezone("Чикаго")).toBe("America/Chicago");
+    expect(resolveTimezone("Сідней")).toBe("Australia/Sydney");
+    expect(resolveTimezone("Торонто")).toBe("America/Toronto");
+  });
+
+  it("апостроф у транслітерації нормалізується незалежно від конкретного символу", () => {
+    expect(resolveTimezone("Х'юстон")).toBe("America/Chicago"); // прямий '
+    expect(resolveTimezone("Х’юстон")).toBe("America/Chicago"); // типографський ’
+    expect(resolveTimezone("Х‘юстон")).toBe("America/Chicago"); // ліва лапка ‘
+    expect(resolveTimezone("Хюстон")).toBe("America/Chicago"); // взагалі без апострофа
   });
 
   it("столиця кирилицею впізнається, навіть якщо латиницею вона й так у IANA (Берлін)", () => {

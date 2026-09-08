@@ -200,6 +200,92 @@ const CITY_ALIASES: Record<string, string> = {
   "братислава": "Europe/Bratislava",
   "лісабон": "Europe/Lisbon",
   "лиссабон": "Europe/Lisbon",
+
+  // --- Великі міста США/Канади без ВЛАСНОГО запису в IANA (використовують пояс
+  // найближчого офіційного міста — однозначно, на відміну від country-рівня, тут нема
+  // неоднозначності: Х'юстон завжди Central, Маямі завжди Eastern). Англійською й
+  // кирилицею одразу, бо жодна форма сама по собі не знайдеться пошуком.
+  houston: "America/Chicago",
+  хюстон: "America/Chicago", // апострофи нормалізуються геть у resolveTimezone нижче
+  dallas: "America/Chicago",
+  даллас: "America/Chicago",
+  atlanta: "America/Chicago",
+  атланта: "America/Chicago",
+  austin: "America/Chicago",
+  остін: "America/Chicago",
+  остин: "America/Chicago",
+  miami: "America/New_York",
+  маямі: "America/New_York",
+  майами: "America/New_York",
+  boston: "America/New_York",
+  бостон: "America/New_York",
+  washington: "America/New_York",
+  вашингтон: "America/New_York",
+  philadelphia: "America/New_York",
+  філадельфія: "America/New_York",
+  филадельфия: "America/New_York",
+  seattle: "America/Los_Angeles",
+  сіетл: "America/Los_Angeles",
+  сиэтл: "America/Los_Angeles",
+  "san francisco": "America/Los_Angeles",
+  "сан-франциско": "America/Los_Angeles",
+  "san diego": "America/Los_Angeles",
+  "лас-вегас": "America/Los_Angeles",
+  "las vegas": "America/Los_Angeles",
+  portland: "America/Los_Angeles",
+  портленд: "America/Los_Angeles",
+  montreal: "America/Toronto",
+  монреаль: "America/Toronto",
+  ottawa: "America/Toronto",
+  оттава: "America/Toronto",
+  calgary: "America/Edmonton",
+  калгарі: "America/Edmonton",
+
+  // --- Кирилична форма міст, які латиницею вже знаходяться пошуком по IANA.
+  чикаго: "America/Chicago",
+  "нью-йорк": "America/New_York",
+  "лос-анджелес": "America/Los_Angeles",
+  денвер: "America/Denver",
+  фінікс: "America/Phoenix",
+  финикс: "America/Phoenix",
+  торонто: "America/Toronto",
+  ванкувер: "America/Vancouver",
+  сідней: "Australia/Sydney",
+  сидней: "Australia/Sydney",
+  мельбурн: "Australia/Melbourne",
+  брісбен: "Australia/Brisbane",
+  перт: "Australia/Perth",
+
+  // --- Великі європейські міста поза столицями (Німеччина/Італія/Франція/Польща —
+  // теж однопоясні країни, ловилося б і рівнем країни, але пряме місто зручніше).
+  frankfurt: "Europe/Berlin",
+  франкфурт: "Europe/Berlin",
+  munich: "Europe/Berlin",
+  "münchen": "Europe/Berlin",
+  мюнхен: "Europe/Berlin",
+  hamburg: "Europe/Berlin",
+  гамбург: "Europe/Berlin",
+  cologne: "Europe/Berlin",
+  köln: "Europe/Berlin",
+  кельн: "Europe/Berlin",
+  milan: "Europe/Rome",
+  milano: "Europe/Rome",
+  "мілан": "Europe/Rome",
+  "милан": "Europe/Rome",
+  naples: "Europe/Rome",
+  неаполь: "Europe/Rome",
+  marseille: "Europe/Paris",
+  марсель: "Europe/Paris",
+  lyon: "Europe/Paris",
+  ліон: "Europe/Paris",
+  лион: "Europe/Paris",
+  krakow: "Europe/Warsaw",
+  "kraków": "Europe/Warsaw",
+  краків: "Europe/Warsaw",
+  краков: "Europe/Warsaw",
+  gdansk: "Europe/Warsaw",
+  "gdańsk": "Europe/Warsaw",
+  гданськ: "Europe/Warsaw",
 };
 
 // "+2", "-5", "UTC+2", "GMT-5" → Etc/GMT∓N (в IANA цей запис історично з ІНВЕРТОВАНИМ
@@ -224,7 +310,9 @@ export function resolveTimezone(input: string): string | null {
   if (!trimmed) return null;
   if (isValidTimezone(trimmed)) return trimmed;
 
-  const key = trimmed.toLowerCase();
+  // Апостроф в укр. транслітерації (Х'юстон) пишуть по-різному залежно від клавіатури
+  // (' ’ ʼ) — нормалізуємо геть, щоб не залежати від конкретного символу.
+  const key = trimmed.toLowerCase().replace(/['’‘ʼʻ`´]/g, "");
   if (CITY_ALIASES[key]) return CITY_ALIASES[key];
 
   const offset = resolveUtcOffset(trimmed);
