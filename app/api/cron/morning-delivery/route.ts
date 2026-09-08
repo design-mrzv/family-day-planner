@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 // "сьогодні" рахуємо ОКРЕМО для кожного користувача за його users.timezone — тому, хто
 // живе не за Києвом, розклад прийде о іншій реальній годині, зате за ПРАВИЛЬНОЮ датою.
 // Нема плану на сьогодні → мовчки пропускаємо (retention-етика, без нагадувань-докорів).
+// deliveredAt захищає від повторної відправки, якщо Vercel ретраїть виклик.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -26,14 +27,15 @@ export async function GET(request: Request) {
     if (!user.chatId) continue;
     const today = dateStringInTz(user.timezone, 0);
     const [plan] = await db
-      .select({ tasks: dailyPlans.tasks })
+      .select({ id: dailyPlans.id, tasks: dailyPlans.tasks, deliveredAt: dailyPlans.deliveredAt })
       .from(dailyPlans)
       .where(and(eq(dailyPlans.userId, user.id), eq(dailyPlans.date, today)))
       .limit(1);
-    if (!plan) continue;
+    if (!plan || plan.deliveredAt) continue;
 
     try {
       await sendMessage(user.chatId, formatScheduleMessage(plan.tasks as SolverResult));
+      await db.update(dailyPlans).set({ deliveredAt: new Date() }).where(eq(dailyPlans.id, plan.id));
       sent++;
     } catch (e) {
       console.error("morning-delivery sendMessage failed for", user.chatId, e);

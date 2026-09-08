@@ -37,10 +37,15 @@ async function handleStart(chatId: string, code: string, origin: string): Promis
 
   try {
     await db.update(users).set({ telegramChatId: chatId }).where(eq(users.id, link.userId));
-  } catch {
-    // UNIQUE(telegram_chat_id): цей chat вже привʼязаний до іншого акаунта.
-    await sendMessage(chatId, "Цей Telegram вже привʼязаний до іншого акаунта.");
-    return;
+  } catch (e) {
+    // 23505 = unique_violation (users.telegram_chat_id): цей chat вже привʼязаний
+    // до іншого акаунта. Будь-яку ІНШУ помилку — не діагностуємо неправильно,
+    // пробрасуємо далі (зовнішній catch webhook-у залогує й чесно промовчить).
+    if ((e as { code?: string }).code === "23505") {
+      await sendMessage(chatId, "Цей Telegram вже привʼязаний до іншого акаунта.");
+      return;
+    }
+    throw e;
   }
 
   await sendMessage(

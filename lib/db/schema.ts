@@ -50,6 +50,9 @@ export const dailyPlans = pgTable(
     date: date("date").notNull(),
     inputText: text("input_text").notNull(),
     tasks: jsonb("tasks").notNull(),
+    // Етап 3: ранкова видача позначає тут — щоб cron не надіслав те саме двічі
+    // (Vercel може ретраїти виклик; user, редагуючи вечірній ввід, не мусить це скидати).
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
