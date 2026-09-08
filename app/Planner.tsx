@@ -2,14 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { SolverResult } from "@/lib/solver/types";
+import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
-
-// Парсер не впізнав жодної справи (сміття/емодзі/непов'язані слова) —
-// schedule/overflow/deadlines усі порожні одночасно.
-function isEmptyResult(r: SolverResult): boolean {
-  return r.schedule.length === 0 && r.overflow.length === 0 && r.deadlines.length === 0;
-}
 
 export default function Planner() {
   const router = useRouter();
@@ -21,6 +15,16 @@ export default function Planner() {
   const [routineHint, setRoutineHint] = useState(false);
   // Для тесту гейту Етапу 2: підставити дату вручну, щоб «прожити» 7 днів за сеанс.
   const [dateOverride, setDateOverride] = useState(() => new Date().toLocaleDateString("sv-SE"));
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+
+  async function onConnectTelegram() {
+    const res = await fetch("/api/telegram/link", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setTelegramLink(data.deepLink as string);
+      window.open(data.deepLink, "_blank");
+    }
+  }
 
   // Памʼять рутини: підставляє звичні справи + перенесене в поле.
   // force=false (на відкритті) не перезаписує введене; force=true (кнопка) заповнює завжди.
@@ -87,8 +91,19 @@ export default function Planner() {
     <main>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h1>Family Day Planner</h1>
-        <button onClick={onLogout}>Вийти</button>
+        <div>
+          <button onClick={onConnectTelegram}>Підключити Telegram</button>{" "}
+          <button onClick={onLogout}>Вийти</button>
+        </div>
       </div>
+      {telegramLink && (
+        <p style={{ fontSize: "0.85em" }}>
+          Якщо вкладка Telegram не відкрилась сама:{" "}
+          <a href={telegramLink} target="_blank" rel="noreferrer">
+            {telegramLink}
+          </a>
+        </p>
+      )}
       <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
 
       {routineHint && (

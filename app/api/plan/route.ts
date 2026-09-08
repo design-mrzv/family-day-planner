@@ -1,10 +1,7 @@
-import { eq } from "drizzle-orm";
-import { parseTasks, ParseError, ServiceError } from "@/lib/parser/parseTasks";
+import { ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { DATE_RE } from "@/lib/parser/schema";
-import { solve, type DurationOverrides } from "@/lib/solver/solve";
 import { getSession } from "@/lib/auth/getSession";
-import { db } from "@/lib/db/client";
-import { durationOverrides as durationOverridesTable, dailyPlans } from "@/lib/db/schema";
+import { planAndSaveDay } from "@/lib/planDay";
 
 // Ключ Gemini живе тут, на сервері. Node-рантайм (SDK потребує Node, не edge).
 export const runtime = "nodejs";
@@ -40,24 +37,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const parsed = await parseTasks(text, today); // LLM: текст → tasks[]
-
-    const overrideRows = await db
-      .select({ taskKey: durationOverridesTable.taskKey, durationMin: durationOverridesTable.durationMin })
-      .from(durationOverridesTable)
-      .where(eq(durationOverridesTable.userId, session.userId));
-    const overrides: DurationOverrides = new Map(overrideRows.map((r) => [r.taskKey, r.durationMin]));
-
-    const result = solve(parsed.tasks, overrides); // детермінований solver: tasks[] → розклад
-
-    await db
-      .insert(dailyPlans)
-      .values({ userId: session.userId, date: today, inputText: text, tasks: result })
-      .onConflictDoUpdate({
-        target: [dailyPlans.userId, dailyPlans.date],
-        set: { inputText: text, tasks: result, updatedAt: new Date() },
-      });
-
+    const result = await planAndSaveDay(session.userId, text, today);
     return Response.json(result);
   } catch (e) {
     if (e instanceof ServiceError) {

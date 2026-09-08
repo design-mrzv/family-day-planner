@@ -29,3 +29,9 @@ export interface SolverResult {
   overflow: OverflowItem[];
   deadlines: Deadline[];
 }
+
+// Парсер не впізнав жодної справи (сміття/емодзі/непов'язані слова) —
+// schedule/overflow/deadlines усі порожні одночасно.
+export function isEmptyResult(r: SolverResult): boolean {
+  return r.schedule.length === 0 && r.overflow.length === 0 && r.deadlines.length === 0;
+}
