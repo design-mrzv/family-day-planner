@@ -1,4 +1,4 @@
-# CONTRACT.md — контракт даних (Етап 1)
+# CONTRACT.md — контракт даних (Етап 1 + Етап 2)
 
 > Джерело істини для меж між компонентами. Заморожено й узгоджено до коду.
 > Змінювати тільки свідомо й з окремим комітом. Продуктовий контекст: `PRODUCT_SPEC_v2.md`,
@@ -90,3 +90,108 @@
    мовчки.
 5. `time_hint` — фолбек. Якщо `title` збігається з якимось хардкод-правилом solver-а
    (напр. "тренування" → зранку) — правило за ключовим словом виграє над `time_hint`.
+
+---
+
+# Етап 2 — памʼять
+
+Ідентифікатор: email (magic link, без пароля). Зберігання: Vercel Postgres (Neon) +
+Drizzle ORM. Авторизація: самопис (`jose`, HS256), не NextAuth — свідомий вибір під дух
+проєкту («проста функція», без важких фреймворків там, де вистачає власного коду).
+
+## 6. Схема БД (`lib/db/schema.ts`)
+
+```sql
+users(
+  id UUID PK,
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ
+)
+
+magic_links(
+  id UUID PK,
+  email TEXT NOT NULL,
+  token_hash TEXT NOT NULL,      -- SHA-256 сирого токена; сирий токен ніде не зберігається
+  expires_at TIMESTAMPTZ NOT NULL,  -- TTL 15 хв
+  used_at TIMESTAMPTZ,           -- NULL поки не використаний; заповнюється при verify (replay-захист)
+  created_at TIMESTAMPTZ
+)
+
+daily_plans(
+  id UUID PK,
+  user_id UUID FK → users,
+  date DATE NOT NULL,
+  input_text TEXT NOT NULL,      -- сирий ввід мами (для дебагу й аудиту)
+  tasks JSONB NOT NULL,          -- повний SolverResult { schedule, overflow, deadlines };
+                                  -- schedule[].status?: "moved" (крок 4 спеку)
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  UNIQUE(user_id, date)          -- один запис на день; UPSERT перезаписує
+)
+
+duration_overrides(
+  id UUID PK,
+  user_id UUID FK → users,
+  task_key TEXT NOT NULL,        -- normalizeTaskKey(title): lowercase + trim, точний збіг
+  duration_min INT NOT NULL,
+  updated_at TIMESTAMPTZ,
+  UNIQUE(user_id, task_key)
+)
+```
+
+Міграції: `drizzle-kit generate` (SQL у `drizzle/`, комітиться) + `drizzle-kit migrate`
+(застосовує до `POSTGRES_URL_NON_POOLING`). Голий CLI не читає `.env.local` — запускати
+через `node --env-file=.env.local node_modules/.bin/drizzle-kit ...`.
+
+## 7. Авторизація (magic link)
+
+**`POST /api/auth/request-link`** — вхід: `{ "email": "mama@example.com" }`.
+Генерує токен (32 байти, base64url), зберігає лише його SHA-256 хеш. У dev-режимі (email
+ще не шлеться) повертає посилання прямо у відповіді:
+```json
+{ "ok": true, "devLink": "https://.../api/auth/verify?token=..." }
+```
+
+**`GET /api/auth/verify?token=...`** — перевіряє токен (не протермінований, не використаний
+раніше), позначає використаним, створює користувача за email якщо новий, підписує сесію
+(JWT HS256, `AUTH_SECRET`, 30 днів) і редиректить на `/` з httpOnly cookie `session`.
+Невалідний/повторний токен → редирект на `/?auth_error=1`.
+
+**`POST /api/auth/logout`** — очищує cookie `session`.
+
+**Усі інші `/api/*` (крім auth-роутів)** тепер вимагають сесію:
+```json
+{ "error": "unauthorized", "message": "Потрібно увійти." }
+```
+з кодом `401`, якщо cookie відсутній/невалідний.
+
+## 8. Памʼять тривалостей
+
+**`POST /api/duration-override`** — вхід: `{ "title": "вечеря", "duration_min": 60 }`
+(додатне ціле, ≤480). UPSERT у `duration_overrides` за `(user_id, normalizeTaskKey(title))`.
+
+Solver (`solve(tasks, durationOverrides?)`) приймає другим аргументом
+`Map<normalizeTaskKey(title), duration_min>`; якщо є збіг — виграє над дефолтним словником
+(`lib/solver/config.ts`). Порожня Map за замовчуванням = поведінка Етапу 1.
+
+`POST /api/plan` тепер, крім парсингу й розкладки: (1) підвантажує всі
+`duration_overrides` користувача перед `solve()`; (2) після — UPSERT `daily_plans`
+за `(user_id, today)`.
+
+## 9. Памʼять рутини + «→ завтра»
+
+**`GET /api/routine`** → `{ "prefill": "текст для textarea" }`. Логіка (`lib/routine.ts`,
+чиста функція, без LLM):
+1. Бере останні 7 записів `daily_plans` користувача.
+2. **carry** — усі унікальні назви справ з **останнього** дня (schedule+overflow, дедуп
+   за `normalizeTaskKey`) — включно з тими, що мають `status: "moved"`.
+3. **routine** — назви, що зустрічались у **≥2 різних днях** з цих 7 (дедлайни не рахуються
+   — вони одноразові).
+4. Результат = carry + routine, дедуп за назвою (carry має пріоритет, routine нічого не
+   дублює). **Час (`fixed_time`) не переноситься** — тільки текст назви.
+
+**`POST /api/plan/move`** — вхід: `{ "date": "YYYY-MM-DD", "title": "..." }`. Знаходить
+справу з цим `title` у `daily_plans.tasks.schedule` за вказану дату, ставить
+`status: "moved"`. UI ховає такі справи з поточного дня; наступного дня вони природно
+потрапляють у `carry` (крок 4 спеку: «незакрите мовчки падає в завтрашній інбокс»,
+без лічильників і осуду).
