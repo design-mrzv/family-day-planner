@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, telegramLinkCodes } from "@/lib/db/schema";
-import { sendMessage, kyivDateString } from "@/lib/telegram";
+import { sendMessage, dateStringInTz, isValidTimezone } from "@/lib/telegram";
 import { planAndSaveDay } from "@/lib/planDay";
 import { ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { isEmptyResult } from "@/lib/solver/types";
@@ -46,8 +46,36 @@ async function handleStart(chatId: string, code: string, origin: string): Promis
   await sendMessage(
     chatId,
     "✅ Готово! Тепер щовечора питатиму, що на завтра, а вранці надсилатиму розклад.\n\n" +
+      "Якщо живеш не за київським часом — напиши /timezone Europe/Kyiv (заміни на свій IANA-пояс, " +
+      "напр. America/Chicago), інакше 'завтра' рахуватиметься неправильно.\n\n" +
       `Керувати планами можна й на сайті: ${origin}`,
   );
+}
+
+// /timezone <IANA-пояс> — явно, без вгадування (Telegram не передає TZ користувача).
+async function handleTimezone(chatId: string, arg: string): Promise<void> {
+  const [user] = await db.select().from(users).where(eq(users.telegramChatId, chatId)).limit(1);
+  if (!user) {
+    await sendMessage(chatId, "Спершу привʼяжи Telegram через сайт — кнопка «Підключити Telegram».");
+    return;
+  }
+
+  if (!arg) {
+    await sendMessage(
+      chatId,
+      `Твій поточний часовий пояс: ${user.timezone}.\n` +
+        "Щоб змінити: /timezone Europe/Kyiv (або інший IANA-рядок, напр. America/Chicago).",
+    );
+    return;
+  }
+
+  if (!isValidTimezone(arg)) {
+    await sendMessage(chatId, `Не впізнала пояс "${arg}". Приклади: Europe/Kyiv, America/Chicago, Europe/Warsaw.`);
+    return;
+  }
+
+  await db.update(users).set({ timezone: arg }).where(eq(users.id, user.id));
+  await sendMessage(chatId, `Готово, часовий пояс тепер ${arg}.`);
 }
 
 async function handleTaskText(chatId: string, text: string): Promise<void> {
@@ -57,7 +85,7 @@ async function handleTaskText(chatId: string, text: string): Promise<void> {
     return;
   }
 
-  const tomorrow = kyivDateString(1);
+  const tomorrow = dateStringInTz(user.timezone, 1);
   try {
     const result = await planAndSaveDay(user.id, text, tomorrow);
     if (isEmptyResult(result)) {
@@ -68,7 +96,7 @@ async function handleTaskText(chatId: string, text: string): Promise<void> {
       return;
     }
     const n = result.schedule.length + result.overflow.length + result.deadlines.length;
-    await sendMessage(chatId, `Записала ${n} справ на завтра. Розклад надішлю вранці о 07:00.`);
+    await sendMessage(chatId, `Записала ${n} справ на завтра. Розклад надішлю вранці.`);
   } catch (e) {
     if (e instanceof ServiceError) {
       await sendMessage(chatId, "Сервіс тимчасово недоступний. Спробуй за хвилину.");
@@ -108,6 +136,8 @@ export async function POST(request: Request) {
       } else {
         await handleStart(chatId, code, origin);
       }
+    } else if (text.startsWith("/timezone")) {
+      await handleTimezone(chatId, text.slice("/timezone".length).trim());
     } else {
       await handleTaskText(chatId, text);
     }

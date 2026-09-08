@@ -7,6 +7,10 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   // Етап 3: другий ідентифікатор, привʼязується через deep-link код (telegram_link_codes).
   telegramChatId: text("telegram_chat_id").unique(),
+  // IANA timezone (напр. "Europe/Kyiv", "America/Chicago"). Визначає, що вважати "завтра"
+  // при вечірньому вводі й "сьогодні" при ранковій видачі. Явно задається командою
+  // /timezone в боті — не вгадуємо (Telegram не передає TZ користувача).
+  timezone: text("timezone").notNull().default("Europe/Kyiv"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

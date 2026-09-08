@@ -60,11 +60,23 @@ export function formatScheduleMessage(result: SolverResult): string {
   return lines.join("\n");
 }
 
-// Поточна дата в Europe/Kyiv (не сервера — Vercel serverless працює в UTC).
+export const DEFAULT_TIMEZONE = "Europe/Kyiv"; // цільова аудиторія спеку; users.timezone default
+
+// Поточна дата в заданому IANA-поясі (не сервера — Vercel serverless працює в UTC).
 // offsetDays: 0 = сьогодні, 1 = завтра.
-export function kyivDateString(offsetDays = 0): string {
+export function dateStringInTz(timezone: string, offsetDays = 0): string {
   const now = new Date(Date.now() + offsetDays * 86_400_000);
-  const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Kyiv" }).formatToParts(now);
+  const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: timezone }).formatToParts(now);
   const get = (type: string) => parts.find((p) => p.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+// Валідний IANA timezone-рядок? (Intl кидає RangeError на невідомий/сміттєвий рядок.)
+export function isValidTimezone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
 }

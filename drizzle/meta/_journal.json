@@ -15,6 +15,13 @@
       "when": 1788837601985,
       "tag": "0001_woozy_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788889390095,
+      "tag": "0002_cynical_carnage",
+      "breakpoints": true
     }
   ]
 }
