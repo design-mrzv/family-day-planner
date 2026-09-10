@@ -1,7 +1,8 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, dailyPlans } from "@/lib/db/schema";
-import { sendMessage, formatScheduleMessage, dateStringInTz } from "@/lib/telegram";
+import { sendMessage, formatScheduleMessage } from "@/lib/telegram";
+import { dateStringInTz } from "@/lib/timezone";
 import type { SolverResult } from "@/lib/solver/types";
 
 export const runtime = "nodejs";

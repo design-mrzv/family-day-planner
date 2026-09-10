@@ -1,7 +1,8 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, telegramLinkCodes } from "@/lib/db/schema";
-import { sendMessage, dateStringInTz, resolveTimezone } from "@/lib/telegram";
+import { sendMessage } from "@/lib/telegram";
+import { dateStringInTz, resolveTimezone } from "@/lib/timezone";
 import { planAndSaveDay } from "@/lib/planDay";
 import { ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { isEmptyResult } from "@/lib/solver/types";
