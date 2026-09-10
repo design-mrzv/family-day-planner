@@ -1,17 +1,18 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { users, dailyPlans } from "@/lib/db/schema";
-import { sendMessage, formatScheduleMessage } from "@/lib/telegram";
-import { dateStringInTz } from "@/lib/timezone";
-import type { SolverResult } from "@/lib/solver/types";
+import { users, dailyPlans, pushSubscriptions } from "@/lib/db/schema";
+import { sendPush } from "@/lib/push";
+import { dateStringInTz, hourInTz } from "@/lib/timezone";
 
 export const runtime = "nodejs";
 
-// Vercel Cron (~07:00 Europe/Kyiv, див. vercel.json). Один глобальний час запуску, але
-// "сьогодні" рахуємо ОКРЕМО для кожного користувача за його users.timezone — тому, хто
-// живе не за Києвом, розклад прийде о іншій реальній годині, зате за ПРАВИЛЬНОЮ датою.
+const MORNING_HOUR = 7;
+
+// Погодинний зовнішній тригер, той самий принцип, що evening-ping: шлемо лише тим, у
+// кого ЗАРАЗ 07:00 за ЇХНІМ поясом. "Сьогодні" теж рахуємо per-user (users.timezone).
 // Нема плану на сьогодні → мовчки пропускаємо (retention-етика, без нагадувань-докорів).
-// deliveredAt захищає від повторної відправки, якщо Vercel ретраїть виклик.
+// deliveredAt захищає від повторної відправки при повторному тіку в той самий час.
+// Тіло push коротке — повний розклад людина бачить у застосунку (GET /api/plan/today).
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -19,27 +20,34 @@ export async function GET(request: Request) {
   }
 
   const linked = await db
-    .select({ id: users.id, chatId: users.telegramChatId, timezone: users.timezone })
+    .selectDistinct({ id: users.id, timezone: users.timezone })
     .from(users)
-    .where(isNotNull(users.telegramChatId));
+    .innerJoin(pushSubscriptions, eq(pushSubscriptions.userId, users.id));
 
   let sent = 0;
   for (const user of linked) {
-    if (!user.chatId) continue;
+    if (hourInTz(user.timezone) !== MORNING_HOUR) continue;
     const today = dateStringInTz(user.timezone, 0);
     const [plan] = await db
-      .select({ id: dailyPlans.id, tasks: dailyPlans.tasks, deliveredAt: dailyPlans.deliveredAt })
+      .select({ id: dailyPlans.id, deliveredAt: dailyPlans.deliveredAt })
       .from(dailyPlans)
       .where(and(eq(dailyPlans.userId, user.id), eq(dailyPlans.date, today)))
       .limit(1);
     if (!plan || plan.deliveredAt) continue;
 
-    try {
-      await sendMessage(user.chatId, formatScheduleMessage(plan.tasks as SolverResult));
+    const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, user.id));
+    let anySent = false;
+    for (const sub of subs) {
+      try {
+        await sendPush(sub, { title: "Доброго ранку!", body: "Твій план на сьогодні готовий 🌅" });
+        anySent = true;
+      } catch (e) {
+        console.error("morning-delivery sendPush failed for", sub.id, e);
+      }
+    }
+    if (anySent) {
       await db.update(dailyPlans).set({ deliveredAt: new Date() }).where(eq(dailyPlans.id, plan.id));
       sent++;
-    } catch (e) {
-      console.error("morning-delivery sendMessage failed for", user.chatId, e);
     }
   }
 
