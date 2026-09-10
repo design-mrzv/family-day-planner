@@ -30,6 +30,10 @@ export default function Planner() {
   const [dateOverride, setDateOverride] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [notifSupport, setNotifSupport] = useState<NotifSupport>("checking");
   const [notifStatus, setNotifStatus] = useState<NotifStatus>("idle");
+  const [timezoneInput, setTimezoneInput] = useState("");
+  const [timezoneSaved, setTimezoneSaved] = useState<string | null>(null);
+  const [timezoneError, setTimezoneError] = useState<string | null>(null);
+  const [timezoneSaving, setTimezoneSaving] = useState(false);
 
   // iOS Safari підтримує push ТІЛЬКИ для сайтів, доданих на головний екран (iOS 16.4+) —
   // системне обмеження Apple, кодом не обійти. Тому окрема гілка з інструкцією.
@@ -107,6 +111,43 @@ export default function Planner() {
 
   useEffect(() => loadRoutine(false), []);
 
+  useEffect(() => {
+    fetch("/api/timezone")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.timezone) {
+          setTimezoneSaved(data.timezone as string);
+          setTimezoneInput(data.timezone as string);
+        }
+      })
+      .catch(() => {
+        /* мовчки — поле лишиться порожнім, можна ввести вручну */
+      });
+  }, []);
+
+  async function onSaveTimezone() {
+    setTimezoneSaving(true);
+    setTimezoneError(null);
+    try {
+      const res = await fetch("/api/timezone", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ input: timezoneInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTimezoneError(data?.message ?? "Не вдалося зберегти пояс.");
+        return;
+      }
+      setTimezoneSaved(data.timezone as string);
+      setTimezoneInput(data.timezone as string);
+    } catch {
+      setTimezoneError("Мережа недоступна. Спробуй ще раз.");
+    } finally {
+      setTimezoneSaving(false);
+    }
+  }
+
   async function onPlan() {
     setLoading(true);
     setError(null);
@@ -170,6 +211,24 @@ export default function Planner() {
       {notifStatus === "error" && (
         <p style={{ color: "red", fontSize: "0.85em" }}>Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>
       )}
+
+      <div style={{ fontSize: "0.85em", color: "#444" }}>
+        <label>
+          часовий пояс{timezoneSaved ? ` (зараз: ${timezoneSaved})` : ""}:{" "}
+          <input
+            type="text"
+            value={timezoneInput}
+            onChange={(e) => setTimezoneInput(e.target.value)}
+            placeholder="Київ / Chicago / +2"
+            style={{ fontFamily: "inherit" }}
+          />
+        </label>{" "}
+        <button type="button" onClick={onSaveTimezone} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+          {timezoneSaving ? "Зберігаю…" : "Зберегти"}
+        </button>
+        {timezoneError && <span style={{ color: "red" }}> {timezoneError}</span>}
+      </div>
+
       <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
 
       {routineHint && (
