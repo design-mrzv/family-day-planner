@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   // при вечірньому вводі й "сьогодні" при ранковій видачі. Явно задається командою
   // /timezone в боті — не вгадуємо (Telegram не передає TZ користувача).
   timezone: text("timezone").notNull().default("Europe/Kyiv"),
+  // Етап 4: дата (в поясі users.timezone), за яку вже пінганули "що на завтра?" —
+  // дедуп для погодинного крону, той самий принцип, що dailyPlans.deliveredAt.
+  lastEveningPingDate: date("last_evening_ping_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -74,3 +77,17 @@ export const durationOverrides = pgTable(
   },
   (t) => [unique().on(t.userId, t.taskKey)],
 );
+
+// Етап 4: Web Push замість Telegram. endpoint — унікальний ідентифікатор підписки
+// браузера (по суті замінює telegram_chat_id); p256dh/auth — ключі шифрування payload,
+// які вимагає Push API. Один користувач може мати кілька підписок (кілька пристроїв).
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
