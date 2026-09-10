@@ -1,0 +1,22 @@
+name: cron-tick
+
+# Погодинний зовнішній тригер для /api/cron/* (Етап 4, docs/CONTRACT.md розділ 14).
+# Vercel Hobby дозволяє нативний крон не частіше разу на добу — per-user timezone
+# логіці (hourInTz у роутах) потрібен реальний погодинний виклик ззовні.
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: evening-ping
+        run: |
+          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://family-planner-ochre.vercel.app/api/cron/evening-ping
+      - name: morning-delivery
+        run: |
+          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://family-planner-ochre.vercel.app/api/cron/morning-delivery
