@@ -5,6 +5,19 @@ import { useRouter } from "next/navigation";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
 
+type NotifSupport = "checking" | "ios-need-install" | "supported" | "unsupported";
+type NotifStatus = "idle" | "enabling" | "enabled" | "error";
+
+// PushManager.subscribe() хоче Uint8Array, VAPID-ключ у env — base64url-рядок.
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const out = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) out[i] = rawData.charCodeAt(i);
+  return out;
+}
+
 export default function Planner() {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -15,14 +28,62 @@ export default function Planner() {
   const [routineHint, setRoutineHint] = useState(false);
   // Для тесту гейту Етапу 2: підставити дату вручну, щоб «прожити» 7 днів за сеанс.
   const [dateOverride, setDateOverride] = useState(() => new Date().toLocaleDateString("sv-SE"));
-  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [notifSupport, setNotifSupport] = useState<NotifSupport>("checking");
+  const [notifStatus, setNotifStatus] = useState<NotifStatus>("idle");
 
-  async function onConnectTelegram() {
-    const res = await fetch("/api/telegram/link", { method: "POST" });
-    if (res.ok) {
-      const data = await res.json();
-      setTelegramLink(data.deepLink as string);
-      window.open(data.deepLink, "_blank");
+  // iOS Safari підтримує push ТІЛЬКИ для сайтів, доданих на головний екран (iOS 16.4+) —
+  // системне обмеження Apple, кодом не обійти. Тому окрема гілка з інструкцією.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function detect() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone =
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches;
+
+      if (isIOS && !isStandalone) {
+        if (!cancelled) setNotifSupport("ios-need-install");
+        return;
+      }
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (!cancelled) setNotifSupport("unsupported");
+        return;
+      }
+      if (!cancelled) setNotifSupport("supported");
+
+      const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+      const sub = await reg?.pushManager.getSubscription().catch(() => undefined);
+      if (!cancelled && sub) setNotifStatus("enabled");
+    }
+
+    void detect();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function onEnableNotifications() {
+    setNotifStatus("enabling");
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setNotifStatus("error");
+        return;
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+      });
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setNotifStatus(res.ok ? "enabled" : "error");
+    } catch {
+      setNotifStatus("error");
     }
   }
 
@@ -92,17 +153,22 @@ export default function Planner() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h1>Family Day Planner</h1>
         <div>
-          <button onClick={onConnectTelegram}>Підключити Telegram</button>{" "}
+          {notifSupport === "supported" && notifStatus !== "enabled" && (
+            <button onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+              {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути сповіщення"}
+            </button>
+          )}
+          {notifStatus === "enabled" && <span style={{ fontSize: "0.85em" }}>Сповіщення увімкнено ✓</span>}{" "}
           <button onClick={onLogout}>Вийти</button>
         </div>
       </div>
-      {telegramLink && (
+      {notifSupport === "ios-need-install" && (
         <p style={{ fontSize: "0.85em" }}>
-          Якщо вкладка Telegram не відкрилась сама:{" "}
-          <a href={telegramLink} target="_blank" rel="noreferrer">
-            {telegramLink}
-          </a>
+          Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.
         </p>
+      )}
+      {notifStatus === "error" && (
+        <p style={{ color: "red", fontSize: "0.85em" }}>Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>
       )}
       <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
 
