@@ -125,6 +125,25 @@ export default function Planner() {
       });
   }, []);
 
+  // Ранковий сценарій: якщо на сьогодні (за поясом користувача) вже є розклад — показуємо
+  // його одразу, без повторного "Розкласти". Заодно підставляємо в поле дати "завтра"
+  // за поясом користувача (не дату браузера) — цільова дата для вечірнього вводу.
+  useEffect(() => {
+    fetch("/api/plan/today")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (data.tomorrow) setDateOverride(data.tomorrow as string);
+        if (data.result) {
+          setResult(data.result as SolverResult);
+          setPlanDate(data.date as string);
+        }
+      })
+      .catch(() => {
+        /* мовчки — поле дати лишиться з дефолтом браузера, можна ввести вручну */
+      });
+  }, []);
+
   async function onSaveTimezone() {
     setTimezoneSaving(true);
     setTimezoneError(null);
