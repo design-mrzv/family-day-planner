@@ -34,6 +34,7 @@ export default function Planner() {
   const [timezoneSaved, setTimezoneSaved] = useState<string | null>(null);
   const [timezoneError, setTimezoneError] = useState<string | null>(null);
   const [timezoneSaving, setTimezoneSaving] = useState(false);
+  const [timezoneDetected, setTimezoneDetected] = useState<string | null>(null);
 
   // iOS Safari підтримує push ТІЛЬКИ для сайтів, доданих на головний екран (iOS 16.4+) —
   // системне обмеження Apple, кодом не обійти. Тому окрема гілка з інструкцією.
@@ -125,6 +126,20 @@ export default function Planner() {
       });
   }, []);
 
+  // Пояс, який реально налаштований на пристрої (ОС/браузер) — не геолокація (та дає лише
+  // координати, а не IANA-пояс, і легко хибить при VPN/тревелі). Це не вгадування: ми лише
+  // читаємо, а не самі вирішуємо — застосовується тільки якщо людина сама натисне кнопку.
+  useEffect(() => {
+    async function detect() {
+      try {
+        setTimezoneDetected(Intl.DateTimeFormat().resolvedOptions().timeZone);
+      } catch {
+        /* невідомо — просто не покажемо підказку */
+      }
+    }
+    void detect();
+  }, []);
+
   // Ранковий сценарій: якщо на сьогодні (за поясом користувача) вже є розклад — показуємо
   // його одразу, без повторного "Розкласти". Заодно підставляємо в поле дати "завтра"
   // за поясом користувача (не дату браузера) — цільова дата для вечірнього вводу.
@@ -144,14 +159,15 @@ export default function Planner() {
       });
   }, []);
 
-  async function onSaveTimezone() {
+  async function onSaveTimezone(override?: string) {
+    const input = override ?? timezoneInput;
     setTimezoneSaving(true);
     setTimezoneError(null);
     try {
       const res = await fetch("/api/timezone", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input: timezoneInput }),
+        body: JSON.stringify({ input }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -242,10 +258,18 @@ export default function Planner() {
             style={{ fontFamily: "inherit" }}
           />
         </label>{" "}
-        <button type="button" onClick={onSaveTimezone} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+        <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
           {timezoneSaving ? "Зберігаю…" : "Зберегти"}
         </button>
         {timezoneError && <span style={{ color: "red" }}> {timezoneError}</span>}
+        {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
+          <p style={{ marginTop: 4 }}>
+            Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
+            <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
+              Застосувати
+            </button>
+          </p>
+        )}
       </div>
 
       <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
