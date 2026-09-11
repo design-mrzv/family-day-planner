@@ -338,10 +338,17 @@ push_subscriptions(
 
 ## 16. Погодинний тригер (заміна розділу 12)
 
-`vercel.json` **видалено** (native cron більше не використовується). Замість нього —
-**`.github/workflows/cron-tick.yml`**: GitHub Actions `schedule: "0 * * * *"` (раз на
-годину, безкоштовно, без обмеження Vercel Hobby) б'є `curl`-ом у обидва ендпоінти з
-`Authorization: Bearer $CRON_SECRET` (GitHub Actions secret).
+`vercel.json` **видалено** (native cron більше не використовується). Перша спроба —
+**GitHub Actions** (`schedule: "0 * * * *"`) — виявилась ненадійною: GitHub офіційно
+попереджає, що `schedule`-запуски best-effort, і для тихих/нових репо спостерігались
+затримки на кілька годин (підтверджено живим тестом: розрив між тіками сягав 3-5 год
+замість обіцяної години). **Замінено на [cron-job.org](https://cron-job.org)**
+(безкоштовний, спеціалізований HTTP-крон-сервіс, до 60 запусків/год) — два завдання
+(`family-planner: evening-ping`, `family-planner: morning-delivery`), кожне погодинно
+(`minutes: [0]`, `hours: [-1]` — щогодини), б'ють `GET` у наші ендпоінти з кастомним
+заголовком `Authorization: Bearer $CRON_SECRET` (через `extendedData.headers`).
+Налаштовано через їхній REST API (`PUT https://api.cron-job.org/jobs`), не вручну
+через UI.
 
 Роути (`app/api/cron/evening-ping`, `app/api/cron/morning-delivery`) самі фільтрують,
 кому зараз слати — `hourInTz(user.timezone)` (`lib/timezone.ts`) порівнюється з
