@@ -6,7 +6,7 @@ import { dateStringInTz, hourInTz } from "@/lib/timezone";
 
 export const runtime = "nodejs";
 
-const EVENING_HOUR = 19;
+const EVENING_HOUR = 18; // ТИМЧАСОВО для швидкого тесту механізму (норма — 19), повернути назад
 
 // Погодинний зовнішній тригер (GitHub Actions, .github/workflows/cron-tick.yml — Vercel
 // Hobby дозволяє нативний крон не частіше разу на добу, тож per-user timezone неможливий

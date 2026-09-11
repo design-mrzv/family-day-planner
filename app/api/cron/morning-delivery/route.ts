@@ -6,7 +6,7 @@ import { dateStringInTz, hourInTz } from "@/lib/timezone";
 
 export const runtime = "nodejs";
 
-const MORNING_HOUR = 7;
+const MORNING_HOUR = 19; // ТИМЧАСОВО для швидкого тесту механізму (норма — 7), повернути назад
 
 // Погодинний зовнішній тригер, той самий принцип, що evening-ping: шлемо лише тим, у
 // кого ЗАРАЗ 07:00 за ЇХНІМ поясом. "Сьогодні" теж рахуємо per-user (users.timezone).
