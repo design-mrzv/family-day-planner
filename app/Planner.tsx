@@ -242,100 +242,96 @@ export default function Planner() {
   }
 
   return (
-    <main>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+    <main className="stack" style={{ maxWidth: 600 }}>
+      <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
-        <div>
+        <button onClick={onLogout}>Вийти</button>
+      </div>
+
+      <div className="card stack">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <span className="muted">Сповіщення</span>
           {notifSupport === "supported" && notifStatus !== "enabled" && (
-            <button onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+            <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
               {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути сповіщення"}
             </button>
           )}
-          {notifStatus === "enabled" && <span style={{ fontSize: "0.85em" }}>Сповіщення увімкнено ✓</span>}{" "}
-          <button onClick={onGenerateShareLink} disabled={shareGenerating}>
-            {shareGenerating ? "Генерую…" : "Отримати посилання для партнера"}
-          </button>{" "}
-          <button onClick={onLogout}>Вийти</button>
+          {notifStatus === "enabled" && <span className="muted">Увімкнено ✓</span>}
         </div>
-      </div>
-      {notifSupport === "ios-need-install" && (
-        <p style={{ fontSize: "0.85em" }}>
-          Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.
-        </p>
-      )}
-      {notifStatus === "error" && (
-        <p style={{ color: "red", fontSize: "0.85em" }}>Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>
-      )}
-      {shareUrl && (
-        <p style={{ fontSize: "0.85em" }}>
-          Посилання для партнера (тільки перегляд, збережи — повторно не покажу):{" "}
-          <a href={shareUrl}>{shareUrl}</a>
-        </p>
-      )}
+        {notifSupport === "ios-need-install" && (
+          <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
+        )}
+        {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
 
-      <div style={{ fontSize: "0.85em", color: "#444" }}>
-        <label>
-          часовий пояс{timezoneSaved ? ` (зараз: ${timezoneSaved})` : ""}:{" "}
-          <input
-            type="text"
-            value={timezoneInput}
-            onChange={(e) => setTimezoneInput(e.target.value)}
-            placeholder="Київ / Chicago / +2"
-            style={{ fontFamily: "inherit" }}
-          />
-        </label>{" "}
-        <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
-          {timezoneSaving ? "Зберігаю…" : "Зберегти"}
-        </button>
-        {timezoneError && <span style={{ color: "red" }}> {timezoneError}</span>}
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <label className="field" style={{ flex: 1 }}>
+            <span className="field-label">Часовий пояс{timezoneSaved ? ` (зараз: ${timezoneSaved})` : ""}</span>
+            <input
+              type="text"
+              value={timezoneInput}
+              onChange={(e) => setTimezoneInput(e.target.value)}
+              placeholder="Київ / Chicago / +2"
+            />
+          </label>
+          <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+            {timezoneSaving ? "Зберігаю…" : "Зберегти"}
+          </button>
+        </div>
+        {timezoneError && <p className="error-text">{timezoneError}</p>}
         {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
-          <p style={{ marginTop: 4 }}>
+          <p className="muted">
             Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
             <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
               Застосувати
             </button>
           </p>
         )}
+
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <span className="muted">Партнер бачить сьогоднішній план</span>
+          <button onClick={onGenerateShareLink} disabled={shareGenerating}>
+            {shareGenerating ? "Генерую…" : "Отримати посилання"}
+          </button>
+        </div>
+        {shareUrl && (
+          <p className="muted">
+            Тільки перегляд, збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
+          </p>
+        )}
       </div>
 
-      <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
+      <div className="stack">
+        <p>Напиши справи на завтра, як думаєш — одним текстом.</p>
 
-      {routineHint && (
-        <p style={{ fontSize: "0.85em" }}>
-          Підставили твої звичні справи — прибери зайве, додай унікальне.
-        </p>
-      )}
+        {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
 
-      <textarea
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          setRoutineHint(false);
-        }}
-        rows={6}
-        style={{ width: "100%", maxWidth: 600, display: "block", fontFamily: "inherit" }}
-        placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
-      />
-      <button onClick={onPlan} disabled={loading || text.trim() === ""} style={{ marginTop: 8 }}>
-        {loading ? "Розкладаю…" : "Розкласти"}
-      </button>
-
-      <div style={{ marginTop: 12, fontSize: "0.85em", color: "#444" }}>
-        <label>
-          дата (для тесту гейту):{" "}
-          <input
-            type="date"
-            value={dateOverride}
-            onChange={(e) => setDateOverride(e.target.value)}
-            style={{ fontFamily: "inherit" }}
-          />
-        </label>{" "}
-        <button type="button" onClick={() => loadRoutine(true)}>
-          ↻ підставити заготовку з памʼяті
-        </button>
+        <textarea
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setRoutineHint(false);
+          }}
+          rows={6}
+          style={{ width: "100%", display: "block" }}
+          placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
+        />
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <button className="btn-primary" onClick={onPlan} disabled={loading || text.trim() === ""}>
+            {loading ? "Розкладаю…" : "Розкласти"}
+          </button>
+          <span className="row">
+            <label className="muted row">
+              дата (для тесту гейту):{" "}
+              <input type="date" value={dateOverride} onChange={(e) => setDateOverride(e.target.value)} />
+            </label>
+            <button type="button" onClick={() => loadRoutine(true)}>
+              ↻ підставити заготовку з памʼяті
+            </button>
+          </span>
+        </div>
       </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p className="error-text">{error}</p>}
 
       {result && <ScheduleView result={result} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onPlan} />}
     </main>
