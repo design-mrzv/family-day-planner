@@ -1,3 +1,4 @@
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
 
@@ -43,7 +44,14 @@ export default function ScheduleView({
                   {!readOnly && (
                     <span className="row">
                       <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                      <button onClick={() => onMoveToTomorrow?.(s.title)}>→ завтра</button>
+                      <button
+                        onClick={() => onMoveToTomorrow?.(s.title)}
+                        aria-label="Перенести на завтра"
+                        title="Перенести на завтра"
+                        style={{ display: "flex", alignItems: "center", padding: "6px 8px" }}
+                      >
+                        <ArrowRight size={16} />
+                      </button>
                     </span>
                   )}
                 </li>
