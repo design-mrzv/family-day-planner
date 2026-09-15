@@ -12,6 +12,10 @@ export const users = pgTable("users", {
   // Етап 4: дата (в поясі users.timezone), за яку вже пінганули "що на завтра?" —
   // дедуп для погодинного крону, той самий принцип, що dailyPlans.deliveredAt.
   lastEveningPingDate: date("last_evening_ping_date"),
+  // Етап 4 (шеринг): SHA-256 хеш read-only посилання для партнера, не сирий токен —
+  // токен довгоживучий і дає доступ до розкладу, тому за витоку БД лишається непридатним.
+  // NULL, поки не згенеровано; перегенерація перезаписує — стара версія одразу відмирає.
+  shareTokenHash: text("share_token_hash").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
