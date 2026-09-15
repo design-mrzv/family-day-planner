@@ -35,19 +35,18 @@ export default function DurationEditor({
   }
 
   return (
-    <span style={{ marginLeft: 4 }}>
-      (
+    <span className="row" style={{ display: "inline-flex", marginLeft: 8 }}>
       <input
         type="number"
         min={5}
         step={5}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        style={{ width: 48, fontFamily: "inherit" }}
-      />{" "}
-      хв)
+        style={{ width: 56, padding: "4px 6px" }}
+      />
+      <span className="muted">хв</span>
       {changed && (
-        <button onClick={onSave} disabled={saving} style={{ marginLeft: 4 }}>
+        <button onClick={onSave} disabled={saving} className="btn-primary" style={{ padding: "4px 10px" }}>
           {saving ? "…" : "Запамʼятати"}
         </button>
       )}

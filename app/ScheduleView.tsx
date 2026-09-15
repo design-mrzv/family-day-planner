@@ -18,66 +18,71 @@ export default function ScheduleView({
 }) {
   if (isEmptyResult(result)) {
     return (
-      <p style={{ marginTop: 16 }}>
+      <p className="muted" style={{ marginTop: 16 }}>
         Здається, тут немає конкретних справ. Спробуй написати, що плануєш зробити завтра.
       </p>
     );
   }
 
   return (
-    <div style={{ marginTop: 16, maxWidth: 600 }}>
-      <h2>Розклад</h2>
-      {result.schedule.filter((s) => s.status !== "moved").length === 0 ? (
-        <p>Порожньо.</p>
-      ) : (
-        <ul>
-          {result.schedule
-            .filter((s) => s.status !== "moved")
-            .map((s) => (
-              <li key={`${s.start}-${s.title}`}>
-                <b>{s.start}</b> — {s.title}
-                {!readOnly && (
-                  <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                )}{" "}
-                {s.type === "fixed" ? "[фіксовано]" : ""}
-                {!readOnly && (
-                  <button onClick={() => onMoveToTomorrow?.(s.title)} style={{ marginLeft: 8 }}>
-                    → завтра
-                  </button>
-                )}
-              </li>
-            ))}
-        </ul>
-      )}
+    <div className="stack" style={{ marginTop: 16, maxWidth: 600 }}>
+      <div>
+        <h2>Розклад</h2>
+        {result.schedule.filter((s) => s.status !== "moved").length === 0 ? (
+          <p className="muted">Порожньо.</p>
+        ) : (
+          <ul className="list-plain card">
+            {result.schedule
+              .filter((s) => s.status !== "moved")
+              .map((s) => (
+                <li key={`${s.start}-${s.title}`}>
+                  <span>
+                    <b>{s.start}</b> — {s.title}
+                    {s.type === "fixed" && <span className="badge">фіксовано</span>}
+                  </span>
+                  {!readOnly && (
+                    <span className="row">
+                      <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
+                      <button onClick={() => onMoveToTomorrow?.(s.title)}>→ завтра</button>
+                    </span>
+                  )}
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
 
       {result.overflow.length > 0 && (
-        <>
+        <div>
           <h2>Не влізло сьогодні</h2>
-          <ul>
+          <ul className="list-plain card">
             {result.overflow.map((o) => (
               <li key={`${o.title}-${o.reason}`}>
-                {o.title}
-                {!readOnly && (
-                  <DurationEditor key={o.duration_min} title={o.title} durationMin={o.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                )}{" "}
-                — {o.reason === "conflict" ? "конфлікт часу" : "немає місця"}
+                <span>{o.title}</span>
+                <span className="row">
+                  {!readOnly && (
+                    <DurationEditor key={o.duration_min} title={o.title} durationMin={o.duration_min} onSaved={onDurationSaved ?? (() => {})} />
+                  )}
+                  <span className="muted">{o.reason === "conflict" ? "конфлікт часу" : "немає місця"}</span>
+                </span>
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
 
       {result.deadlines.length > 0 && (
-        <>
+        <div>
           <h2>Дедлайни</h2>
-          <ul>
+          <ul className="list-plain card">
             {result.deadlines.map((d, i) => (
               <li key={i}>
-                {d.title} — до {d.date}
+                <span>{d.title}</span>
+                <span className="muted">до {d.date}</span>
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
     </div>
   );
