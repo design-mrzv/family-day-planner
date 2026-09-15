@@ -199,6 +199,16 @@ button:disabled {
   border-color: var(--accent);
 }
 
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .badge {
   display: inline-block;
   font-size: 0.75rem;

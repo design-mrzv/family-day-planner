@@ -252,11 +252,9 @@ export default function Planner() {
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
         <div className="row">
-          {settingsOpen && (
-            <button onClick={onLogout} className="row">
-              <SignOut size={16} /> Вийти
-            </button>
-          )}
+          <button onClick={onLogout} className="row">
+            <SignOut size={16} /> Вийти
+          </button>
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             aria-label={settingsOpen ? "Закрити налаштування" : "Налаштування"}
@@ -274,8 +272,8 @@ export default function Planner() {
           <h2>Налаштування</h2>
 
           <div className="stack">
-            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-              <BellSimple size={16} style={{ verticalAlign: "-2px" }} /> Сповіщення
+            <h3 className="section-label">
+              <BellSimple size={16} /> Сповіщення
             </h3>
             {notifSupport === "ios-need-install" && (
               <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
@@ -298,9 +296,7 @@ export default function Planner() {
           </div>
 
           <div className="stack">
-            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-              Часовий пояс
-            </h3>
+            <h3 className="section-label">Часовий пояс</h3>
             <div className="row" style={{ justifyContent: "space-between" }}>
               <label className="field" style={{ flex: 1 }}>
                 <span className="field-label">{timezoneSaved ? `Зараз: ${timezoneSaved}` : "Ще не задано"}</span>
@@ -327,8 +323,8 @@ export default function Planner() {
           </div>
 
           <div className="stack">
-            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-              <ShareNetwork size={16} style={{ verticalAlign: "-2px" }} /> Поділитись планом з партнером
+            <h3 className="section-label">
+              <ShareNetwork size={16} /> Поділитись планом з партнером
             </h3>
             <div className="row" style={{ justifyContent: "space-between" }}>
               <span className="muted">Партнер бачить сьогоднішній план (тільки перегляд)</span>
@@ -366,13 +362,8 @@ export default function Planner() {
           <div className="stack">
             <div className="row" style={{ justifyContent: "space-between" }}>
               <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
-              <button
-                type="button"
-                onClick={() => loadRoutine(true)}
-                aria-label="Підставити заготовку з памʼяті"
-                className="icon-btn"
-              >
-                <ArrowClockwise size={16} />
+              <button type="button" onClick={() => loadRoutine(true)} className="row" title="Підставити звичні справи з памʼяті">
+                <ArrowClockwise size={16} /> Заготовка
               </button>
             </div>
 
