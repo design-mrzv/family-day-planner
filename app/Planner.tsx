@@ -35,6 +35,23 @@ export default function Planner() {
   const [timezoneError, setTimezoneError] = useState<string | null>(null);
   const [timezoneSaving, setTimezoneSaving] = useState(false);
   const [timezoneDetected, setTimezoneDetected] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareGenerating, setShareGenerating] = useState(false);
+
+  // Read-only посилання для партнера (Етап 4). Сирий токен ніде не зберігається —
+  // показуємо один раз одразу після генерації, повторно показати неможливо.
+  async function onGenerateShareLink() {
+    setShareGenerating(true);
+    try {
+      const res = await fetch("/api/share/token", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setShareUrl(data.shareUrl as string);
+      }
+    } finally {
+      setShareGenerating(false);
+    }
+  }
 
   // iOS Safari підтримує push ТІЛЬКИ для сайтів, доданих на головний екран (iOS 16.4+) —
   // системне обмеження Apple, кодом не обійти. Тому окрема гілка з інструкцією.
@@ -235,6 +252,9 @@ export default function Planner() {
             </button>
           )}
           {notifStatus === "enabled" && <span style={{ fontSize: "0.85em" }}>Сповіщення увімкнено ✓</span>}{" "}
+          <button onClick={onGenerateShareLink} disabled={shareGenerating}>
+            {shareGenerating ? "Генерую…" : "Отримати посилання для партнера"}
+          </button>{" "}
           <button onClick={onLogout}>Вийти</button>
         </div>
       </div>
@@ -245,6 +265,12 @@ export default function Planner() {
       )}
       {notifStatus === "error" && (
         <p style={{ color: "red", fontSize: "0.85em" }}>Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>
+      )}
+      {shareUrl && (
+        <p style={{ fontSize: "0.85em" }}>
+          Посилання для партнера (тільки перегляд, збережи — повторно не покажу):{" "}
+          <a href={shareUrl}>{shareUrl}</a>
+        </p>
       )}
 
       <div style={{ fontSize: "0.85em", color: "#444" }}>
