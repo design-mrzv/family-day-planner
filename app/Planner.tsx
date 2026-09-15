@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, BellSimple, ShareNetwork, ArrowClockwise, SignOut } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, BellSimple, ShareNetwork, ArrowClockwise, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import ScheduleView from "./ScheduleView";
 
@@ -251,122 +251,153 @@ export default function Planner() {
     <main className="stack" style={{ maxWidth: 600 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
-        <button
-          onClick={() => setSettingsOpen((v) => !v)}
-          aria-label="Налаштування"
-          aria-expanded={settingsOpen}
-          style={{ display: "flex", alignItems: "center", padding: "8px" }}
-        >
-          <Gear size={20} />
-        </button>
-      </div>
-
-      {notifSupport === "ios-need-install" && (
-        <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
-      )}
-      {notifSupport === "supported" && notifStatus !== "enabled" && (
-        <div className="card row" style={{ justifyContent: "space-between", borderColor: "var(--accent)" }}>
-          <span className="row">
-            <BellSimple size={20} />
-            Увімкни сповіщення, щоб план приходив сам
-          </span>
-          <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
-            {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
-          </button>
-        </div>
-      )}
-      {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
-
-      {settingsOpen && (
-        <div className="card stack">
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <span className="row muted">
-              <BellSimple size={18} /> Сповіщення
-            </span>
-            {notifStatus === "enabled" ? <span className="muted">Увімкнено ✓</span> : <span className="muted">Не увімкнено</span>}
-          </div>
-
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <label className="field" style={{ flex: 1 }}>
-              <span className="field-label">Часовий пояс{timezoneSaved ? ` (зараз: ${timezoneSaved})` : ""}</span>
-              <input
-                type="text"
-                value={timezoneInput}
-                onChange={(e) => setTimezoneInput(e.target.value)}
-                placeholder="Київ / Chicago / +2"
-              />
-            </label>
-            <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
-              {timezoneSaving ? "Зберігаю…" : "Зберегти"}
-            </button>
-          </div>
-          {timezoneError && <p className="error-text">{timezoneError}</p>}
-          {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
-            <p className="muted">
-              Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
-              <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
-                Застосувати
-              </button>
-            </p>
-          )}
-
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <span className="row muted">
-              <ShareNetwork size={18} /> Партнер бачить сьогоднішній план
-            </span>
-            <button onClick={onGenerateShareLink} disabled={shareGenerating}>
-              {shareGenerating ? "Генерую…" : "Отримати посилання"}
-            </button>
-          </div>
-          {shareUrl && (
-            <p className="muted">
-              Тільки перегляд, збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
-            </p>
-          )}
-
-          <div className="row" style={{ justifyContent: "flex-end" }}>
+        <div className="row">
+          {settingsOpen && (
             <button onClick={onLogout} className="row">
               <SignOut size={16} /> Вийти
             </button>
-          </div>
-        </div>
-      )}
-
-      {hasResult && scheduleView}
-
-      <div className="stack">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
+          )}
           <button
-            type="button"
-            onClick={() => loadRoutine(true)}
-            aria-label="Підставити заготовку з памʼяті"
-            style={{ display: "flex", alignItems: "center", padding: "6px" }}
+            onClick={() => setSettingsOpen((v) => !v)}
+            aria-label={settingsOpen ? "Закрити налаштування" : "Налаштування"}
+            aria-expanded={settingsOpen}
+            aria-pressed={settingsOpen}
+            className={`icon-btn${settingsOpen ? " btn-primary" : ""}`}
           >
-            <ArrowClockwise size={16} />
+            {settingsOpen ? <X size={20} /> : <Gear size={20} />}
           </button>
         </div>
-
-        {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
-
-        <textarea
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setRoutineHint(false);
-          }}
-          rows={6}
-          style={{ width: "100%", display: "block" }}
-          placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
-        />
-        <button className="btn-primary" onClick={onPlan} disabled={loading || text.trim() === ""}>
-          {loading ? "Розкладаю…" : "Розкласти"}
-        </button>
       </div>
 
-      {error && <p className="error-text">{error}</p>}
+      {settingsOpen ? (
+        <div className="stack">
+          <h2>Налаштування</h2>
 
-      {!hasResult && scheduleView}
+          <div className="stack">
+            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              <BellSimple size={16} style={{ verticalAlign: "-2px" }} /> Сповіщення
+            </h3>
+            {notifSupport === "ios-need-install" && (
+              <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
+            )}
+            {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              {notifStatus === "enabled" ? (
+                <span className="muted">Увімкнено ✓</span>
+              ) : notifSupport === "supported" ? (
+                <>
+                  <span className="muted">Не увімкнено</span>
+                  <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+                    {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
+                  </button>
+                </>
+              ) : (
+                <span className="muted">Недоступно на цьому пристрої</span>
+              )}
+            </div>
+          </div>
+
+          <div className="stack">
+            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              Часовий пояс
+            </h3>
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <label className="field" style={{ flex: 1 }}>
+                <span className="field-label">{timezoneSaved ? `Зараз: ${timezoneSaved}` : "Ще не задано"}</span>
+                <input
+                  type="text"
+                  value={timezoneInput}
+                  onChange={(e) => setTimezoneInput(e.target.value)}
+                  placeholder="Київ / Chicago / +2"
+                />
+              </label>
+              <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+                {timezoneSaving ? "Зберігаю…" : "Зберегти"}
+              </button>
+            </div>
+            {timezoneError && <p className="error-text">{timezoneError}</p>}
+            {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
+              <p className="muted">
+                Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
+                <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
+                  Застосувати
+                </button>
+              </p>
+            )}
+          </div>
+
+          <div className="stack">
+            <h3 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              <ShareNetwork size={16} style={{ verticalAlign: "-2px" }} /> Поділитись планом з партнером
+            </h3>
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span className="muted">Партнер бачить сьогоднішній план (тільки перегляд)</span>
+              <button onClick={onGenerateShareLink} disabled={shareGenerating}>
+                {shareGenerating ? "Генерую…" : "Отримати посилання"}
+              </button>
+            </div>
+            {shareUrl && (
+              <p className="muted">
+                Збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {notifSupport === "ios-need-install" && (
+            <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
+          )}
+          {notifSupport === "supported" && notifStatus !== "enabled" && (
+            <div className="card row card-accent" style={{ justifyContent: "space-between" }}>
+              <span className="row">
+                <BellSimple size={20} />
+                Увімкни сповіщення, щоб план приходив сам
+              </span>
+              <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+                {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
+              </button>
+            </div>
+          )}
+          {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
+
+          {hasResult && scheduleView}
+
+          <div className="stack">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
+              <button
+                type="button"
+                onClick={() => loadRoutine(true)}
+                aria-label="Підставити заготовку з памʼяті"
+                className="icon-btn"
+              >
+                <ArrowClockwise size={16} />
+              </button>
+            </div>
+
+            {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
+
+            <textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setRoutineHint(false);
+              }}
+              rows={6}
+              style={{ width: "100%", display: "block" }}
+              placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
+            />
+            <button className="btn-primary" onClick={onPlan} disabled={loading || text.trim() === ""}>
+              {loading ? "Розкладаю…" : "Розкласти"}
+            </button>
+          </div>
+
+          {error && <p className="error-text">{error}</p>}
+
+          {!hasResult && scheduleView}
+        </>
+      )}
     </main>
   );
 }

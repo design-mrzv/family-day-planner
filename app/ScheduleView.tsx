@@ -48,7 +48,7 @@ export default function ScheduleView({
                         onClick={() => onMoveToTomorrow?.(s.title)}
                         aria-label="Перенести на завтра"
                         title="Перенести на завтра"
-                        style={{ display: "flex", alignItems: "center", padding: "6px 8px" }}
+                        className="icon-btn"
                       >
                         <ArrowRight size={16} />
                       </button>

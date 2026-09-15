@@ -41,6 +41,13 @@ body {
   line-height: 1.5;
 }
 
+/* Центрує контент на десктопі/планшеті — кожна сторінка все одно задає свій max-width
+   інлайном (main{style:{maxWidth:...}}), тут лише горизонтальне центрування. */
+main {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 h1 {
   font-size: 1.5rem;
   font-weight: 600;
@@ -175,6 +182,21 @@ button:disabled {
 
 .list-plain > li:not(:last-child) {
   border-bottom: 1px solid var(--border);
+}
+
+/* Мінімальний тач-таргет 44px для icon-only кнопок (WCAG 2.5.5) — раніше було
+   20-28px, реальний ризик промахів пальцем на телефоні. */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.card-accent {
+  border-color: var(--accent);
 }
 
 .badge {
