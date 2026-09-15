@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, X, BellSimple, ShareNetwork, ArrowClockwise, SignOut } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, BellSimple, ShareNetwork, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import ScheduleView from "./ScheduleView";
 
@@ -112,15 +112,15 @@ export default function Planner() {
     }
   }
 
-  // Памʼять рутини: підставляє звичні справи + перенесене в поле.
-  // force=false (на відкритті) не перезаписує введене; force=true (кнопка) заповнює завжди.
-  function loadRoutine(force: boolean) {
+  // Памʼять рутини: підставляє звичні справи + перенесене в поле при відкритті,
+  // не перезаписує, якщо людина вже щось написала.
+  useEffect(() => {
     fetch("/api/routine")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.prefill) return;
         setText((cur) => {
-          if (!force && cur.trim() !== "") return cur;
+          if (cur.trim() !== "") return cur;
           setRoutineHint(true);
           return data.prefill;
         });
@@ -128,9 +128,7 @@ export default function Planner() {
       .catch(() => {
         /* мовчки — заготовка не критична */
       });
-  }
-
-  useEffect(() => loadRoutine(false), []);
+  }, []);
 
   useEffect(() => {
     fetch("/api/timezone")
@@ -252,8 +250,8 @@ export default function Planner() {
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
         <div className="row">
-          <button onClick={onLogout} className="row">
-            <SignOut size={16} /> Вийти
+          <button onClick={onLogout} aria-label="Вийти" title="Вийти" className="icon-btn">
+            <SignOut size={20} />
           </button>
           <button
             onClick={() => setSettingsOpen((v) => !v)}
@@ -360,12 +358,7 @@ export default function Planner() {
           {hasResult && scheduleView}
 
           <div className="stack">
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
-              <button type="button" onClick={() => loadRoutine(true)} className="row" title="Підставити звичні справи з памʼяті">
-                <ArrowClockwise size={16} /> Заготовка
-              </button>
-            </div>
+            <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
 
             {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
 
