@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
-import DurationEditor from "./DurationEditor";
+import type { SolverResult } from "@/lib/solver/types";
+import ScheduleView from "./ScheduleView";
 
 type NotifSupport = "checking" | "ios-need-install" | "supported" | "unsupported";
 type NotifStatus = "idle" | "enabling" | "enabled" | "error";
@@ -311,74 +311,7 @@ export default function Planner() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {result && isEmptyResult(result) && (
-        <p style={{ marginTop: 16 }}>
-          Здається, тут немає конкретних справ. Спробуй написати, що плануєш зробити завтра.
-        </p>
-      )}
-
-      {result && !isEmptyResult(result) && (
-        <div style={{ marginTop: 16, maxWidth: 600 }}>
-          <h2>Розклад</h2>
-          {result.schedule.filter((s) => s.status !== "moved").length === 0 ? (
-            <p>Порожньо.</p>
-          ) : (
-            <ul>
-              {result.schedule
-                .filter((s) => s.status !== "moved")
-                .map((s) => (
-                  <li key={`${s.start}-${s.title}`}>
-                    <b>{s.start}</b> — {s.title}
-                    <DurationEditor
-                      key={s.duration_min}
-                      title={s.title}
-                      durationMin={s.duration_min}
-                      onSaved={onPlan}
-                    />{" "}
-                    {s.type === "fixed" ? "[фіксовано]" : ""}
-                    <button onClick={() => onMoveToTomorrow(s.title)} style={{ marginLeft: 8 }}>
-                      → завтра
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          )}
-
-          {result.overflow.length > 0 && (
-            <>
-              <h2>Не влізло сьогодні</h2>
-              <ul>
-                {result.overflow.map((o) => (
-                  <li key={`${o.title}-${o.reason}`}>
-                    {o.title}
-                    <DurationEditor
-                      key={o.duration_min}
-                      title={o.title}
-                      durationMin={o.duration_min}
-                      onSaved={onPlan}
-                    />{" "}
-                    —{" "}
-                    {o.reason === "conflict" ? "конфлікт часу" : "немає місця"}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {result.deadlines.length > 0 && (
-            <>
-              <h2>Дедлайни</h2>
-              <ul>
-                {result.deadlines.map((d, i) => (
-                  <li key={i}>
-                    {d.title} — до {d.date}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
+      {result && <ScheduleView result={result} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onPlan} />}
     </main>
   );
 }
