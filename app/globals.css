@@ -1,4 +1,32 @@
-/* Нуль дизайну до Етапу 5: системний шрифт, чорний текст, білий фон. */
+/* Етап 5 — дизайн-токени. Спокій і ясність для перевантаженої мами (PRODUCT_SPEC_v2),
+   один приглушений акцент (не AI-purple), off-white/off-black, обидві теми з коробки.
+   Контраст перевірено WCAG AA (≥4.5:1) для кожної пари перед фіксацією значень. */
+:root {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --text: #1c1917;
+  --text-muted: #6b6560;
+  --border: #e7e5e4;
+  --accent: #2f6f6b;
+  --accent-contrast: #ffffff;
+  --danger: #b3261e;
+  --radius: 10px;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1a19;
+    --surface: #262322;
+    --text: #f2efec;
+    --text-muted: #a39c96;
+    --border: #3a3634;
+    --accent: #4f9a95;
+    --accent-contrast: #0d1f1e;
+    --danger: #f2836b;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,9 +34,133 @@
 }
 
 body {
-  font-family: system-ui, sans-serif;
-  color: #000;
-  background: #fff;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
   padding: 16px;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+a {
+  color: var(--accent);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 1rem;
+  border-radius: var(--radius);
+}
+
+input,
+textarea,
+select {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Невеликий набір класів замість Tailwind — проєкт свідомо без важких залежностей. */
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 320px;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.list-plain {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
