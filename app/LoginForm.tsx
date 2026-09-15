@@ -33,28 +33,28 @@ export default function LoginForm() {
   }
 
   return (
-    <main>
+    <main className="stack" style={{ maxWidth: 320, marginTop: 40 }}>
       <h1>Family Day Planner</h1>
-      <p>Введи email — надішлемо посилання для входу.</p>
+      <p className="muted">Введи email — надішлемо посилання для входу.</p>
 
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} className="field">
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="mama@example.com"
-          style={{ display: "block", width: "100%", maxWidth: 320, fontFamily: "inherit" }}
+          style={{ width: "100%" }}
         />
-        <button type="submit" disabled={loading || email.trim() === ""} style={{ marginTop: 8 }}>
+        <button type="submit" className="btn-primary" disabled={loading || email.trim() === ""}>
           {loading ? "Надсилаю…" : "Отримати посилання"}
         </button>
       </form>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p className="error-text">{error}</p>}
 
       {devLink && (
-        <p style={{ marginTop: 16 }}>
+        <p className="muted">
           Ще нема відправки листів (dev-режим) — перейди за посиланням, щоб увійти:
           <br />
           <a href={devLink}>{devLink}</a>
