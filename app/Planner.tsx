@@ -250,9 +250,6 @@ export default function Planner() {
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
         <div className="row">
-          <button onClick={onLogout} aria-label="Вийти" title="Вийти" className="icon-btn">
-            <SignOut size={20} />
-          </button>
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             aria-label={settingsOpen ? "Закрити налаштування" : "Налаштування"}
@@ -261,6 +258,9 @@ export default function Planner() {
             className={`icon-btn${settingsOpen ? " btn-primary" : ""}`}
           >
             {settingsOpen ? <X size={20} /> : <Gear size={20} />}
+          </button>
+          <button onClick={onLogout} aria-label="Вийти" title="Вийти" className="icon-btn">
+            <SignOut size={20} />
           </button>
         </div>
       </div>

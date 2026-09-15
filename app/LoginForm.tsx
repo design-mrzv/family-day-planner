@@ -33,11 +33,14 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="stack" style={{ maxWidth: 320, marginTop: 40 }}>
+    <main
+      className="stack"
+      style={{ maxWidth: 600, minHeight: "calc(100dvh - 32px)", justifyContent: "center" }}
+    >
       <h1>Family Day Planner</h1>
       <p className="muted">Введи email — надішлемо посилання для входу.</p>
 
-      <form onSubmit={onSubmit} className="field">
+      <form onSubmit={onSubmit} className="stack" style={{ gap: 16 }}>
         <input
           type="email"
           required
