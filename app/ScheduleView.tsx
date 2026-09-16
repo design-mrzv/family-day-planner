@@ -1,6 +1,102 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
+import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
+
+function timeToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToLabel(mins: number): string {
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+const PX_PER_MIN = 1.2; // 72px/год
+const MIN_BLOCK_HEIGHT = 44; // тач-таргет, а не рівно duration_min — короткі задачі теж мають влазити контроли
+
+// Timeline: година зліва (сітка + мітки), блоки задач позиціоновані й висотою
+// пропорційні реальному часу/тривалості. Діапазон — НЕ фіксовані 24 год (порожньо й
+// довгий скрол на телефоні), а компактний: від першої задачі (і "зараз", якщо isToday)
+// до останньої (і "зараз"), з годинним запасом по краях.
+function Timeline({
+  items,
+  readOnly,
+  onMoveToTomorrow,
+  onDurationSaved,
+  isToday,
+}: {
+  items: Scheduled[];
+  readOnly: boolean;
+  onMoveToTomorrow?: (title: string) => void;
+  onDurationSaved?: () => void;
+  isToday: boolean;
+}) {
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const starts = items.map((s) => timeToMinutes(s.start));
+  const ends = items.map((s) => timeToMinutes(s.start) + s.duration_min);
+  const lowCandidates = isToday ? [...starts, nowMinutes] : starts;
+  const highCandidates = isToday ? [...ends, nowMinutes] : ends;
+
+  let rangeStart = Math.floor((Math.min(...lowCandidates) - 60) / 60) * 60;
+  let rangeEnd = Math.ceil((Math.max(...highCandidates) + 60) / 60) * 60;
+  rangeStart = Math.max(0, rangeStart);
+  rangeEnd = Math.min(24 * 60, rangeEnd);
+
+  const hours: number[] = [];
+  for (let t = rangeStart; t <= rangeEnd; t += 60) hours.push(t);
+
+  const totalHeight = (rangeEnd - rangeStart) * PX_PER_MIN;
+  const showNowLine = isToday && nowMinutes >= rangeStart && nowMinutes <= rangeEnd;
+
+  return (
+    <div className="timeline" style={{ height: totalHeight }}>
+      {hours.map((t) => (
+        <div key={t} className="timeline-hour" style={{ top: (t - rangeStart) * PX_PER_MIN }}>
+          <span className="timeline-hour-label">{minutesToLabel(t)}</span>
+          <span className="timeline-hour-line" />
+        </div>
+      ))}
+
+      {showNowLine && (
+        <div className="now-line" style={{ top: (nowMinutes - rangeStart) * PX_PER_MIN }}>
+          <span className="now-dot" />
+        </div>
+      )}
+
+      {items.map((s) => {
+        const top = (timeToMinutes(s.start) - rangeStart) * PX_PER_MIN;
+        const height = Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT);
+        return (
+          <div key={`${s.start}-${s.title}`} className="timeline-block card" style={{ top, height }}>
+            <div className="row" style={{ justifyContent: "space-between", height: "100%" }}>
+              <span>
+                <b>{s.start}</b> — {s.title}
+                {s.type === "fixed" && <span className="badge">фіксовано</span>}
+              </span>
+              {!readOnly && (
+                <span className="row">
+                  <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
+                  <button
+                    onClick={() => onMoveToTomorrow?.(s.title)}
+                    aria-label="Перенести на завтра"
+                    title="Перенести на завтра"
+                    className="icon-btn"
+                  >
+                    <ArrowRight size={16} />
+                  </button>
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Презентаційний компонент — та сама розмітка для авторизованого Planner.tsx
 // (readOnly=false) і публічної read-only сторінки для партнера (app/share/[token]/page.tsx,
@@ -9,11 +105,13 @@ import DurationEditor from "./DurationEditor";
 export default function ScheduleView({
   result,
   readOnly = false,
+  isToday = false,
   onMoveToTomorrow,
   onDurationSaved,
 }: {
   result: SolverResult;
   readOnly?: boolean;
+  isToday?: boolean;
   onMoveToTomorrow?: (title: string) => void;
   onDurationSaved?: () => void;
 }) {
@@ -25,38 +123,16 @@ export default function ScheduleView({
     );
   }
 
+  const visible = result.schedule.filter((s) => s.status !== "moved");
+
   return (
     <div className="stack" style={{ marginTop: 16, maxWidth: 600 }}>
       <div>
         <h2>Розклад</h2>
-        {result.schedule.filter((s) => s.status !== "moved").length === 0 ? (
+        {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (
-          <ul className="list-plain card">
-            {result.schedule
-              .filter((s) => s.status !== "moved")
-              .map((s) => (
-                <li key={`${s.start}-${s.title}`}>
-                  <span>
-                    <b>{s.start}</b> — {s.title}
-                    {s.type === "fixed" && <span className="badge">фіксовано</span>}
-                  </span>
-                  {!readOnly && (
-                    <span className="row">
-                      <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                      <button
-                        onClick={() => onMoveToTomorrow?.(s.title)}
-                        aria-label="Перенести на завтра"
-                        title="Перенести на завтра"
-                        className="icon-btn"
-                      >
-                        <ArrowRight size={16} />
-                      </button>
-                    </span>
-                  )}
-                </li>
-              ))}
-          </ul>
+          <Timeline items={visible} readOnly={readOnly} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onDurationSaved} isToday={isToday} />
         )}
       </div>
 

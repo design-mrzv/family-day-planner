@@ -33,6 +33,9 @@ export default function Planner() {
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(false);
+  // "Зараз"-лінія на timeline має сенс лише коли дивимось СЬОГОДНІШНІй план (fetch
+  // /api/plan/today), не щойно розкладене "завтра" (onPlan() завжди планує на targetDate).
+  const [viewingToday, setViewingToday] = useState(false);
   const [notifSupport, setNotifSupport] = useState<NotifSupport>("checking");
   const [notifStatus, setNotifStatus] = useState<NotifStatus>("idle");
   const [timezoneInput, setTimezoneInput] = useState("");
@@ -172,6 +175,7 @@ export default function Planner() {
         if (data.result) {
           setResult(data.result as SolverResult);
           setPlanDate(data.date as string);
+          setViewingToday(true);
         }
       })
       .catch(() => {
@@ -220,6 +224,7 @@ export default function Planner() {
       }
       setPlanDate(today);
       setResult(data as SolverResult);
+      setViewingToday(false); // onPlan() завжди планує на targetDate (завтра), не сьогодні
       return true;
     } catch {
       setError("Мережа недоступна. Спробуй ще раз.");
@@ -246,7 +251,9 @@ export default function Planner() {
   }
 
   const hasResult = result !== null && !isEmptyResult(result);
-  const scheduleView = result && <ScheduleView result={result} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onPlan} />;
+  const scheduleView = result && (
+    <ScheduleView result={result} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onPlan} isToday={viewingToday} />
+  );
 
   return (
     <main className="stack" style={{ maxWidth: 600 }}>

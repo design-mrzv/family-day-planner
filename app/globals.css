@@ -290,3 +290,62 @@ details[open] > .settings-row .chevron {
     border-radius: var(--radius);
   }
 }
+
+/* Timeline-розклад — година зліва (сітка + мітки), блоки позиціоновані/висотою
+   пропорційні реальному часу. Ліва "колонка" — padding-left, мітки/лінії/блоки
+   абсолютно позиціоновані всередині. */
+.timeline {
+  position: relative;
+  padding-left: 56px;
+}
+
+.timeline-hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+}
+
+.timeline-hour-label {
+  position: absolute;
+  left: 0;
+  top: -8px;
+  width: 48px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.timeline-hour-line {
+  position: absolute;
+  left: 56px;
+  right: 0;
+  top: 0;
+  border-top: 1px solid var(--border);
+}
+
+.timeline-block {
+  position: absolute;
+  left: 56px;
+  right: 0;
+  padding: 6px 12px;
+  overflow: hidden;
+}
+
+.now-line {
+  position: absolute;
+  left: 56px;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  z-index: 1;
+}
+
+.now-dot {
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+}

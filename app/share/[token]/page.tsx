@@ -35,7 +35,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   return (
     <main className="stack" style={{ maxWidth: 600 }}>
       <h1>Family Day Planner</h1>
-      {result ? <ScheduleView result={result} readOnly /> : <p className="muted">Плану на сьогодні ще немає.</p>}
+      {result ? <ScheduleView result={result} readOnly isToday /> : <p className="muted">Плану на сьогодні ще немає.</p>}
     </main>
   );
 }
