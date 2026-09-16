@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, X, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import ScheduleView from "./ScheduleView";
+import TaskInputSheet from "./TaskInputSheet";
 
 type NotifSupport = "checking" | "ios-need-install" | "supported" | "unsupported";
 type NotifStatus = "idle" | "enabling" | "enabled" | "error";
@@ -31,6 +32,7 @@ export default function Planner() {
   // (пояс користувача), без ручного поля в UI (гейти пройдено, дебаг-поле більше не потрібне).
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inputOpen, setInputOpen] = useState(false);
   const [notifSupport, setNotifSupport] = useState<NotifSupport>("checking");
   const [notifStatus, setNotifStatus] = useState<NotifStatus>("idle");
   const [timezoneInput, setTimezoneInput] = useState("");
@@ -201,10 +203,9 @@ export default function Planner() {
     }
   }
 
-  async function onPlan() {
+  async function onPlan(): Promise<boolean> {
     setLoading(true);
     setError(null);
-    setResult(null);
     try {
       const today = targetDate; // YYYY-MM-DD
       const res = await fetch("/api/plan", {
@@ -215,12 +216,14 @@ export default function Planner() {
       const data = await res.json();
       if (!res.ok) {
         setError(data?.message ?? "Помилка.");
-        return;
+        return false;
       }
       setPlanDate(today);
       setResult(data as SolverResult);
+      return true;
     } catch {
       setError("Мережа недоступна. Спробуй ще раз.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -377,31 +380,25 @@ export default function Planner() {
           )}
           {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
 
-          {hasResult && scheduleView}
+          {result === null && <p className="muted">Ще немає розкладу на сьогодні. Натисни +, щоб написати задачі.</p>}
+          {scheduleView}
 
-          <div className="stack">
-            <p>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
+          <button onClick={() => setInputOpen(true)} aria-label="Написати задачі" className="fab btn-primary">
+            <Plus size={24} />
+          </button>
 
-            {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
-
-            <textarea
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setRoutineHint(false);
-              }}
-              rows={6}
-              style={{ width: "100%", display: "block" }}
-              placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
-            />
-            <button className="btn-primary" onClick={onPlan} disabled={loading || text.trim() === ""}>
-              {loading ? "Розкладаю…" : "Розкласти"}
-            </button>
-          </div>
-
-          {error && <p className="error-text">{error}</p>}
-
-          {!hasResult && scheduleView}
+          <TaskInputSheet
+            open={inputOpen}
+            onClose={() => setInputOpen(false)}
+            text={text}
+            setText={setText}
+            onPlan={onPlan}
+            loading={loading}
+            error={error}
+            routineHint={routineHint}
+            setRoutineHint={setRoutineHint}
+            hasResult={hasResult}
+          />
         </>
       )}
     </main>

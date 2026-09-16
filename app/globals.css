@@ -246,3 +246,47 @@ details[open] > .settings-row .chevron {
   padding: 2px 8px;
   margin-left: 8px;
 }
+
+/* Плаваюча кнопка вводу — той самий +FAB, що на референсах календарів/тасків. */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--text) 24%, transparent);
+  z-index: 10;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--text) 40%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: var(--bg);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+  .modal-backdrop {
+    align-items: center;
+  }
+  .modal-panel {
+    border-radius: var(--radius);
+  }
+}
