@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, X, BellSimple, ShareNetwork, SignOut } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
 import ScheduleView from "./ScheduleView";
 
@@ -269,73 +269,95 @@ export default function Planner() {
         <div className="stack">
           <h2>Налаштування</h2>
 
-          <div className="stack">
-            <h3 className="section-label">
-              <BellSimple size={16} /> Сповіщення
-            </h3>
-            {notifSupport === "ios-need-install" && (
-              <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
-            )}
-            {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              {notifStatus === "enabled" ? (
-                <span className="muted">Увімкнено ✓</span>
-              ) : notifSupport === "supported" ? (
-                <>
-                  <span className="muted">Не увімкнено</span>
-                  <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
-                    {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
-                  </button>
-                </>
-              ) : (
+          <details className="card">
+            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
+              <span className="row">
+                <span className="icon-chip">
+                  <BellSimple size={16} />
+                </span>
+                Сповіщення
+              </span>
+              <span className="row">
+                <span className="muted">{notifStatus === "enabled" ? "Увімкнено ✓" : "Не увімкнено"}</span>
+                <CaretRight size={14} className="chevron" />
+              </span>
+            </summary>
+            <div className="stack" style={{ marginTop: 12 }}>
+              {notifSupport === "ios-need-install" && (
+                <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
+              )}
+              {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
+              {notifStatus !== "enabled" && notifSupport === "supported" && (
+                <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+                  {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
+                </button>
+              )}
+              {notifStatus !== "enabled" && notifSupport !== "supported" && notifSupport !== "ios-need-install" && (
                 <span className="muted">Недоступно на цьому пристрої</span>
               )}
             </div>
-          </div>
+          </details>
 
-          <div className="stack">
-            <h3 className="section-label">Часовий пояс</h3>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <label className="field" style={{ flex: 1 }}>
-                <span className="field-label">{timezoneSaved ? `Зараз: ${timezoneSaved}` : "Ще не задано"}</span>
+          <details className="card">
+            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
+              <span className="row">
+                <span className="icon-chip">
+                  <Clock size={16} />
+                </span>
+                Часовий пояс
+              </span>
+              <span className="row">
+                <span className="muted">{timezoneSaved || "Не задано"}</span>
+                <CaretRight size={14} className="chevron" />
+              </span>
+            </summary>
+            <div className="stack" style={{ marginTop: 12 }}>
+              <div className="row" style={{ justifyContent: "space-between" }}>
                 <input
                   type="text"
                   value={timezoneInput}
                   onChange={(e) => setTimezoneInput(e.target.value)}
                   placeholder="Київ / Chicago / +2"
+                  style={{ flex: 1 }}
                 />
-              </label>
-              <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
-                {timezoneSaving ? "Зберігаю…" : "Зберегти"}
-              </button>
-            </div>
-            {timezoneError && <p className="error-text">{timezoneError}</p>}
-            {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
-              <p className="muted">
-                Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
-                <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
-                  Застосувати
+                <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+                  {timezoneSaving ? "Зберігаю…" : "Зберегти"}
                 </button>
-              </p>
-            )}
-          </div>
+              </div>
+              {timezoneError && <p className="error-text">{timezoneError}</p>}
+              {timezoneDetected && timezoneSaved && timezoneDetected !== timezoneSaved && (
+                <p className="muted">
+                  Пристрій каже, що ти зараз у поясі {timezoneDetected}.{" "}
+                  <button type="button" onClick={() => onSaveTimezone(timezoneDetected)} disabled={timezoneSaving}>
+                    Застосувати
+                  </button>
+                </p>
+              )}
+            </div>
+          </details>
 
-          <div className="stack">
-            <h3 className="section-label">
-              <ShareNetwork size={16} /> Поділитись планом з партнером
-            </h3>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <span className="muted">Партнер бачить сьогоднішній план (тільки перегляд)</span>
+          <details className="card">
+            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
+              <span className="row">
+                <span className="icon-chip">
+                  <ShareNetwork size={16} />
+                </span>
+                Партнеру
+              </span>
+              <CaretRight size={14} className="chevron" />
+            </summary>
+            <div className="stack" style={{ marginTop: 12 }}>
+              <p className="muted">Партнер бачить сьогоднішній план (тільки перегляд).</p>
               <button onClick={onGenerateShareLink} disabled={shareGenerating}>
                 {shareGenerating ? "Генерую…" : "Отримати посилання"}
               </button>
+              {shareUrl && (
+                <p className="muted">
+                  Збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
+                </p>
+              )}
             </div>
-            {shareUrl && (
-              <p className="muted">
-                Збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
-              </p>
-            )}
-          </div>
+          </details>
         </div>
       ) : (
         <>

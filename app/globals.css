@@ -199,6 +199,34 @@ button:disabled {
   border-color: var(--accent);
 }
 
+.icon-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* <summary> без дефолтного трикутника-маркера браузера — свій chevron замість нього. */
+.settings-row {
+  list-style: none;
+  cursor: pointer;
+}
+.settings-row::-webkit-details-marker {
+  display: none;
+}
+.settings-row .chevron {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+details[open] > .settings-row .chevron {
+  transform: rotate(90deg);
+}
+
 .section-label {
   display: flex;
   align-items: center;
