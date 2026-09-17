@@ -250,10 +250,10 @@ details[open] > .settings-row .chevron {
 /* Плаваюча кнопка вводу — той самий +FAB, що на референсах календарів/тасків. */
 .fab {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
+  right: 24px;
+  bottom: 32px;
+  width: 64px;
+  height: 64px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -265,7 +265,9 @@ details[open] > .settings-row .chevron {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--text) 40%, transparent);
+  background: color-mix(in srgb, var(--text) 45%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-end;
   justify-content: center;

@@ -296,34 +296,48 @@ export default function Planner() {
         <div className="stack">
           <h2>Налаштування</h2>
 
-          <details className="card">
-            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
-              <span className="row">
-                <span className="icon-chip">
-                  <BellSimple size={16} />
+          {notifStatus === "enabled" ? (
+            <div className="card">
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <span className="row">
+                  <span className="icon-chip">
+                    <BellSimple size={16} />
+                  </span>
+                  Сповіщення
                 </span>
-                Сповіщення
-              </span>
-              <span className="row">
-                <span className="muted">{notifStatus === "enabled" ? "Увімкнено ✓" : "Не увімкнено"}</span>
-                <CaretRight size={14} className="chevron" />
-              </span>
-            </summary>
-            <div className="stack" style={{ marginTop: 12 }}>
-              {notifSupport === "ios-need-install" && (
-                <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
-              )}
-              {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
-              {notifStatus !== "enabled" && notifSupport === "supported" && (
-                <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
-                  {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
-                </button>
-              )}
-              {notifStatus !== "enabled" && notifSupport !== "supported" && notifSupport !== "ios-need-install" && (
-                <span className="muted">Недоступно на цьому пристрої</span>
-              )}
+                <span className="muted">Увімкнено ✓</span>
+              </div>
             </div>
-          </details>
+          ) : (
+            <details className="card">
+              <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
+                <span className="row">
+                  <span className="icon-chip">
+                    <BellSimple size={16} />
+                  </span>
+                  Сповіщення
+                </span>
+                <span className="row">
+                  <span className="muted">Не увімкнено</span>
+                  <CaretRight size={14} className="chevron" />
+                </span>
+              </summary>
+              <div className="stack" style={{ marginTop: 12 }}>
+                {notifSupport === "ios-need-install" && (
+                  <p className="muted">Щоб отримувати сповіщення на iPhone: Поділитися (⬆︎) → «На головний екран» → відкрий застосунок звідти.</p>
+                )}
+                {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
+                {notifSupport === "supported" && (
+                  <button className="btn-primary" onClick={onEnableNotifications} disabled={notifStatus === "enabling"}>
+                    {notifStatus === "enabling" ? "Вмикаю…" : "Увімкнути"}
+                  </button>
+                )}
+                {notifSupport !== "supported" && notifSupport !== "ios-need-install" && (
+                  <span className="muted">Недоступно на цьому пристрої</span>
+                )}
+              </div>
+            </details>
+          )}
 
           <details className="card">
             <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
@@ -339,15 +353,20 @@ export default function Planner() {
               </span>
             </summary>
             <div className="stack" style={{ marginTop: 12 }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
+              <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
                 <input
                   type="text"
                   value={timezoneInput}
                   onChange={(e) => setTimezoneInput(e.target.value)}
                   placeholder="Київ / Chicago / +2"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-                <button type="button" onClick={() => onSaveTimezone()} disabled={timezoneSaving || timezoneInput.trim() === ""}>
+                <button
+                  type="button"
+                  onClick={() => onSaveTimezone()}
+                  disabled={timezoneSaving || timezoneInput.trim() === ""}
+                  style={{ flexShrink: 0 }}
+                >
                   {timezoneSaving ? "Зберігаю…" : "Зберегти"}
                 </button>
               </div>
@@ -364,14 +383,16 @@ export default function Planner() {
           </details>
 
           <details className="card">
-            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
-              <span className="row">
+            <summary className="settings-row row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+              <span className="row" style={{ minWidth: 0, flex: 1, flexWrap: "nowrap" }}>
                 <span className="icon-chip">
                   <ShareNetwork size={16} />
                 </span>
-                Партнеру
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+                  Поділитись планом з партнером
+                </span>
               </span>
-              <CaretRight size={14} className="chevron" />
+              <CaretRight size={14} className="chevron" style={{ flexShrink: 0 }} />
             </summary>
             <div className="stack" style={{ marginTop: 12 }}>
               <p className="muted">Партнер бачить сьогоднішній план (тільки перегляд).</p>
@@ -379,8 +400,11 @@ export default function Planner() {
                 {shareGenerating ? "Генерую…" : "Отримати посилання"}
               </button>
               {shareUrl && (
-                <p className="muted">
-                  Збережи — повторно не покажу: <a href={shareUrl}>{shareUrl}</a>
+                <p className="muted" style={{ overflowWrap: "anywhere" }}>
+                  Збережи — повторно не покажу:{" "}
+                  <a href={shareUrl} style={{ overflowWrap: "anywhere" }}>
+                    {shareUrl}
+                  </a>
                 </p>
               )}
             </div>
