@@ -250,9 +250,26 @@ export default function Planner() {
     if (res.ok) setResult((await res.json()) as SolverResult);
   }
 
+  // Чекбокс "виконано" — на відміну від "→ завтра", не ховає пункт, лише позначає.
+  async function onToggleDone(title: string, done: boolean) {
+    if (!planDate) return;
+    const res = await fetch("/api/plan/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date: planDate, title, done }),
+    });
+    if (res.ok) setResult((await res.json()) as SolverResult);
+  }
+
   const hasResult = result !== null && !isEmptyResult(result);
   const scheduleView = result && (
-    <ScheduleView result={result} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onPlan} isToday={viewingToday} />
+    <ScheduleView
+      result={result}
+      onMoveToTomorrow={onMoveToTomorrow}
+      onDurationSaved={onPlan}
+      onToggleDone={onToggleDone}
+      isToday={viewingToday}
+    />
   );
 
   return (

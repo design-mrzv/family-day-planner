@@ -25,12 +25,14 @@ function Timeline({
   readOnly,
   onMoveToTomorrow,
   onDurationSaved,
+  onToggleDone,
   isToday,
 }: {
   items: Scheduled[];
   readOnly: boolean;
   onMoveToTomorrow?: (title: string) => void;
   onDurationSaved?: () => void;
+  onToggleDone?: (title: string, done: boolean) => void;
   isToday: boolean;
 }) {
   const now = new Date();
@@ -70,11 +72,23 @@ function Timeline({
       {items.map((s) => {
         const top = (timeToMinutes(s.start) - rangeStart) * PX_PER_MIN;
         const height = Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT);
+        const done = s.status === "done";
         return (
-          <div key={`${s.start}-${s.title}`} className="timeline-block card" style={{ top, height }}>
+          <div key={`${s.start}-${s.title}`} className="timeline-block card" style={{ top, height, opacity: done ? 0.6 : 1 }}>
             <div className="row" style={{ justifyContent: "space-between", height: "100%" }}>
-              <span>
-                <b>{s.start}</b> — {s.title}
+              <span className="row">
+                {!readOnly && (
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={(e) => onToggleDone?.(s.title, e.target.checked)}
+                    aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
+                    style={{ width: 18, height: 18, flexShrink: 0 }}
+                  />
+                )}
+                <span style={{ textDecoration: done ? "line-through" : "none" }}>
+                  <b>{s.start}</b> — {s.title}
+                </span>
                 {s.type === "fixed" && <span className="badge">фіксовано</span>}
               </span>
               {!readOnly && (
@@ -108,12 +122,14 @@ export default function ScheduleView({
   isToday = false,
   onMoveToTomorrow,
   onDurationSaved,
+  onToggleDone,
 }: {
   result: SolverResult;
   readOnly?: boolean;
   isToday?: boolean;
   onMoveToTomorrow?: (title: string) => void;
   onDurationSaved?: () => void;
+  onToggleDone?: (title: string, done: boolean) => void;
 }) {
   if (isEmptyResult(result)) {
     return (
@@ -132,7 +148,14 @@ export default function ScheduleView({
         {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (
-          <Timeline items={visible} readOnly={readOnly} onMoveToTomorrow={onMoveToTomorrow} onDurationSaved={onDurationSaved} isToday={isToday} />
+          <Timeline
+            items={visible}
+            readOnly={readOnly}
+            onMoveToTomorrow={onMoveToTomorrow}
+            onDurationSaved={onDurationSaved}
+            onToggleDone={onToggleDone}
+            isToday={isToday}
+          />
         )}
       </div>
 
