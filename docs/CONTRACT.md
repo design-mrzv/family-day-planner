@@ -407,8 +407,52 @@ Component-сторінка, без сесії. Хешує токен з URL → 
 `<ScheduleView result={...} readOnly />` або "Плану на сьогодні ще немає."
 
 **`app/ScheduleView.tsx`** — презентаційний компонент, спільний для `Planner.tsx`
-(readOnly=false — `DurationEditor` + "→ завтра") і публічної сторінки
-(readOnly=true — жодних кнопок). Одна розмітка, два режими.
+(readOnly=false — чекбокс "виконано" + тап по картці відкриває деталі, Етап 5,
+розділ 19) і публічної сторінки (readOnly=true — жодних інтерактивних елементів).
+Одна розмітка, два режими.
 
 Посилання **постійне** (партнер бекмаркає раз) — показує поточний "сьогодні" при
 кожному відкритті, не статичний знімок одного дня.
+
+## 19. Ручне редагування часу задачі + конфлікт (Етап 5)
+
+Timeline-картка (`app/ScheduleView.tsx`) показує лише назву + час + чекбокс
+"виконано". Тап (не readOnly) відкриває `app/TaskDetailSheet.tsx` — назва,
+початок/кінець, опційний чекбокс "запам'ятати тривалість для схожих задач" (той
+самий механізм, що розділ 8 — той самий upsert, винесений у `lib/duration.ts`:
+`saveDurationOverride`, перевикористовується і `api/duration-override`, і цим
+роутом).
+
+**`POST /api/plan/reschedule`** — вхід:
+```json
+{
+  "date": "YYYY-MM-DD",
+  "title": "поточна назва (ключ пошуку)",
+  "new_title": "назва після редагування",
+  "start": "HH:MM",
+  "duration_min": 60,
+  "remember_duration_min": 45,
+  "resolve_conflict": true
+}
+```
+`remember_duration_min` і `resolve_conflict` — опційні. Знаходить елемент у
+`daily_plans.tasks.schedule` за `normalizeTaskKey(title)` (як `move`/`complete`).
+
+Якщо нове `[start, start+duration_min]` перетинається з іншою задачею дня
+(буквальний timeline-overlap, `lib/solver/solve.ts`: `overlaps`, без буфера) і
+`resolve_conflict` не передано — **нічого не зберігає**, відповідає `409`:
+```json
+{ "error": "time_conflict", "conflicts": [{ "title": "...", "start": "HH:MM", "duration_min": 60 }] }
+```
+Фронтенд показує банер із підтвердженням, повторює запит з `resolve_conflict: true`.
+
+З `resolve_conflict: true` — кожну конфліктну задачу зсуває на вільний слот через
+`findFreeSlot(durationMin, occupied)` (`lib/solver/solve.ts`, тонка обгортка над
+`placeFlexible` — **той самий** пошук, що solver використовує для гнучких справ
+при первинному плануванні, лише експортований і перевикористаний, а не
+продубльований). Немає вільного слоту → задача йде в `overflow` з
+`reason: "no_slot"` (той самий шлях, яким сам solver обробляє непоміщені справи).
+
+Відповідь (200) — повний `SolverResult`, як `move`/`complete`. Наслідок:
+`type` ("fixed"/"flexible") редагована задача **зберігає** — ручна правка часу
+не змінює її природу для майбутніх перепланувань.
