@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { isEmptyResult, type SolverResult } from "@/lib/solver/types";
+import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
 import ScheduleView from "./ScheduleView";
 import TaskInputSheet from "./TaskInputSheet";
+import TaskDetailSheet from "./TaskDetailSheet";
 
 type NotifSupport = "checking" | "ios-need-install" | "supported" | "unsupported";
 type NotifStatus = "idle" | "enabling" | "enabled" | "error";
@@ -33,6 +34,7 @@ export default function Planner() {
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(false);
+  const [detailTask, setDetailTask] = useState<Scheduled | null>(null);
   // "Зараз"-лінія на timeline має сенс лише коли дивимось СЬОГОДНІШНІй план (fetch
   // /api/plan/today), не щойно розкладене "завтра" (onPlan() завжди планує на targetDate).
   const [viewingToday, setViewingToday] = useState(false);
@@ -265,9 +267,9 @@ export default function Planner() {
   const scheduleView = result && (
     <ScheduleView
       result={result}
-      onMoveToTomorrow={onMoveToTomorrow}
       onDurationSaved={onPlan}
       onToggleDone={onToggleDone}
+      onOpenDetail={setDetailTask}
       isToday={viewingToday}
     />
   );
@@ -447,6 +449,23 @@ export default function Planner() {
             setRoutineHint={setRoutineHint}
             hasResult={hasResult}
           />
+
+          {detailTask && planDate && (
+            <TaskDetailSheet
+              key={`${detailTask.title}-${detailTask.start}`}
+              task={detailTask}
+              date={planDate}
+              onClose={() => setDetailTask(null)}
+              onSaved={(r) => {
+                setResult(r);
+                setDetailTask(null);
+              }}
+              onMoveToTomorrow={async (title) => {
+                await onMoveToTomorrow(title);
+                setDetailTask(null);
+              }}
+            />
+          )}
         </>
       )}
     </main>

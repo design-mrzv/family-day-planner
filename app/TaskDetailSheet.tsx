@@ -1,0 +1,170 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { X } from "@phosphor-icons/react/dist/ssr";
+import { toMin, toHHMM } from "@/lib/solver/config";
+import type { Scheduled, SolverResult } from "@/lib/solver/types";
+
+type Conflict = { title: string; start: string; duration_min: number };
+
+// Екран редагування задачі — відкривається тапом по картці в ScheduleView (Етап 5).
+// Тут же: чекбокс "запам'ятати тривалість для схожих задач" (памʼять тривалості,
+// той самий механізм, що DurationEditor) і перенесення конфлікту з іншою задачею
+// дня на підтвердження (api/plan/reschedule повертає 409 замість тихого перезапису).
+// Батько монтує/розмонтовує компонент і задає `key` за назвою+часом задачі — так
+// стан полів (title/start/end) щоразу ініціалізується заново з `task` без ефекту,
+// що синхронізує пропс у state (react-hooks/set-state-in-effect).
+export default function TaskDetailSheet({
+  task,
+  date,
+  onClose,
+  onSaved,
+  onMoveToTomorrow,
+}: {
+  task: Scheduled;
+  date: string;
+  onClose: () => void;
+  onSaved: (result: SolverResult) => void;
+  onMoveToTomorrow: (title: string) => void;
+}) {
+  const [title, setTitle] = useState(task.title);
+  const [start, setStart] = useState(task.start);
+  const [end, setEnd] = useState(() => toHHMM(toMin(task.start) + task.duration_min));
+  const [remember, setRemember] = useState(false);
+  const [rememberMin, setRememberMin] = useState(String(task.duration_min));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<Conflict | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const durationMin = toMin(end) - toMin(start);
+  const invalid = title.trim() === "" || durationMin < 5;
+
+  async function submit(resolveConflict: boolean) {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/plan/reschedule", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          date,
+          title: task.title,
+          new_title: title.trim(),
+          start,
+          duration_min: durationMin,
+          remember_duration_min: remember ? Number(rememberMin) : undefined,
+          resolve_conflict: resolveConflict || undefined,
+        }),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        setConflict(data.conflicts[0] as Conflict);
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.message ?? "Не вдалося зберегти.");
+        return;
+      }
+      onSaved((await res.json()) as SolverResult);
+    } catch {
+      setError("Мережа недоступна. Спробуй ще раз.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
+          <p style={{ flex: 1, minWidth: 0 }}>Задача</p>
+          <button onClick={onClose} aria-label="Закрити" className="icon-btn" style={{ flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="field">
+          <span className="field-label">Назва</span>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
+        </div>
+
+        <div className="row" style={{ flexWrap: "nowrap" }}>
+          <div className="field" style={{ flex: 1 }}>
+            <span className="field-label">Початок</span>
+            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: "100%" }} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <span className="field-label">Кінець</span>
+            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ width: "100%" }} />
+          </div>
+        </div>
+        {durationMin < 5 && <p className="error-text">Час завершення має бути пізніше початку.</p>}
+
+        <label className="row" style={{ cursor: "pointer" }}>
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          Запам&apos;ятати тривалість для схожих задач
+        </label>
+        {remember && (
+          <div className="row">
+            <input
+              type="number"
+              min={5}
+              step={5}
+              value={rememberMin}
+              onChange={(e) => setRememberMin(e.target.value)}
+              style={{ width: 72 }}
+            />
+            <span className="muted">хв</span>
+          </div>
+        )}
+
+        {conflict && (
+          <div className="card" style={{ borderColor: "var(--danger)" }}>
+            <p>
+              У цей час вже стоїть «{conflict.title}» ({conflict.start}). Перенести її на вільний час?
+            </p>
+            <div className="row">
+              <button onClick={() => setConflict(null)} disabled={saving}>
+                Скасувати
+              </button>
+              <button className="btn-primary" onClick={() => submit(true)} disabled={saving}>
+                Перенести і зберегти
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <p className="error-text">{error}</p>}
+
+        {!conflict && (
+          <button className="btn-primary" onClick={() => submit(false)} disabled={saving || invalid}>
+            {saving ? "Зберігаю…" : "Зберегти"}
+          </button>
+        )}
+
+        <button
+          onClick={() => {
+            onMoveToTomorrow(task.title);
+          }}
+          disabled={saving}
+        >
+          Перенести на завтра
+        </button>
+      </div>
+    </div>
+  );
+}

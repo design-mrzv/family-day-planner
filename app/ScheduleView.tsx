@@ -1,4 +1,3 @@
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
 import DurationEditor from "./DurationEditor";
 
@@ -23,16 +22,14 @@ const MIN_BLOCK_HEIGHT = 44; // тач-таргет, а не рівно duration
 function Timeline({
   items,
   readOnly,
-  onMoveToTomorrow,
-  onDurationSaved,
   onToggleDone,
+  onOpenDetail,
   isToday,
 }: {
   items: Scheduled[];
   readOnly: boolean;
-  onMoveToTomorrow?: (title: string) => void;
-  onDurationSaved?: () => void;
   onToggleDone?: (title: string, done: boolean) => void;
+  onOpenDetail?: (s: Scheduled) => void;
   isToday: boolean;
 }) {
   const now = new Date();
@@ -73,36 +70,34 @@ function Timeline({
         const top = (timeToMinutes(s.start) - rangeStart) * PX_PER_MIN;
         const height = Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT);
         const done = s.status === "done";
+        const clickable = !readOnly && onOpenDetail;
         return (
-          <div key={`${s.start}-${s.title}`} className="timeline-block card" style={{ top, height, opacity: done ? 0.6 : 1 }}>
-            <div className="row" style={{ justifyContent: "space-between", height: "100%" }}>
-              <span className="row">
-                {!readOnly && (
-                  <input
-                    type="checkbox"
-                    checked={done}
-                    onChange={(e) => onToggleDone?.(s.title, e.target.checked)}
-                    aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
-                    style={{ width: 18, height: 18, flexShrink: 0 }}
-                  />
-                )}
+          <div
+            key={`${s.start}-${s.title}`}
+            className="timeline-block card"
+            style={{ top, height, opacity: done ? 0.6 : 1, cursor: clickable ? "pointer" : undefined }}
+            onClick={clickable ? () => onOpenDetail(s) : undefined}
+          >
+            <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start", height: "100%" }}>
+              <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                 <span style={{ textDecoration: done ? "line-through" : "none" }}>
-                  <b>{s.start}</b> — {s.title}
+                  {s.title}
+                  {s.type === "fixed" && <span className="badge">фіксовано</span>}
                 </span>
-                {s.type === "fixed" && <span className="badge">фіксовано</span>}
+                <span className="muted">{s.start}</span>
               </span>
               {!readOnly && (
-                <span className="row">
-                  <DurationEditor key={s.duration_min} title={s.title} durationMin={s.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                  <button
-                    onClick={() => onMoveToTomorrow?.(s.title)}
-                    aria-label="Перенести на завтра"
-                    title="Перенести на завтра"
-                    className="icon-btn"
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </span>
+                <input
+                  type="checkbox"
+                  checked={done}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onToggleDone?.(s.title, e.target.checked);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
+                  style={{ width: 18, height: 18, flexShrink: 0 }}
+                />
               )}
             </div>
           </div>
@@ -114,22 +109,22 @@ function Timeline({
 
 // Презентаційний компонент — та сама розмітка для авторизованого Planner.tsx
 // (readOnly=false) і публічної read-only сторінки для партнера (app/share/[token]/page.tsx,
-// readOnly=true). У readOnly-режимі DurationEditor і "→ завтра" не рендеряться —
-// жорстка межа з PRODUCT_SPEC_v2 розділ 4 крок 6: партнер тільки дивиться.
+// readOnly=true). У readOnly-режимі чекбокс і тап-у-деталі не рендеряться — жорстка
+// межа з PRODUCT_SPEC_v2 розділ 4 крок 6: партнер тільки дивиться.
 export default function ScheduleView({
   result,
   readOnly = false,
   isToday = false,
-  onMoveToTomorrow,
   onDurationSaved,
   onToggleDone,
+  onOpenDetail,
 }: {
   result: SolverResult;
   readOnly?: boolean;
   isToday?: boolean;
-  onMoveToTomorrow?: (title: string) => void;
   onDurationSaved?: () => void;
   onToggleDone?: (title: string, done: boolean) => void;
+  onOpenDetail?: (s: Scheduled) => void;
 }) {
   if (isEmptyResult(result)) {
     return (
@@ -151,9 +146,8 @@ export default function ScheduleView({
           <Timeline
             items={visible}
             readOnly={readOnly}
-            onMoveToTomorrow={onMoveToTomorrow}
-            onDurationSaved={onDurationSaved}
             onToggleDone={onToggleDone}
+            onOpenDetail={onOpenDetail}
             isToday={isToday}
           />
         )}
