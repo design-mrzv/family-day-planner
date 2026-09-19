@@ -34,7 +34,12 @@ export default function TaskInputSheet({
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -68,7 +73,7 @@ export default function TaskInputSheet({
           placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
         />
         <button className="btn-primary" onClick={handlePlan} disabled={loading || text.trim() === ""}>
-          {loading ? "Розкладаю…" : "Розкласти"}
+          {loading ? "Розкладаю…" : "Розкласти план"}
         </button>
 
         {error && <p className="error-text">{error}</p>}
