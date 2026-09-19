@@ -67,6 +67,23 @@ export const durationOverrides = pgTable(
   (t) => [unique().on(t.userId, t.taskKey)],
 );
 
+// Ручний вибір кольору задачі (Етап 5, раунд 4) — точна копія durationOverrides.
+// color_index: 1-6, індекс у палітрі --palette-1..6 (app/globals.css). Свідомо НЕ
+// категорія — людина сама обирає колір, ніякого сенсу за замовчуванням не закладено.
+export const taskColors = pgTable(
+  "task_colors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    taskKey: text("task_key").notNull(),
+    colorIndex: integer("color_index").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.taskKey)],
+);
+
 // Етап 4: Web Push замість Telegram. endpoint — унікальний ідентифікатор підписки
 // браузера (по суті замінює telegram_chat_id); p256dh/auth — ключі шифрування payload,
 // які вимагає Push API. Один користувач може мати кілька підписок (кілька пристроїв).

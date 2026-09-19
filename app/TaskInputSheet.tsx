@@ -5,6 +5,8 @@ import { X } from "@phosphor-icons/react/dist/ssr";
 
 // Модалка вводу — той самий textarea+"Розкласти", що раніше жив прямо на сторінці,
 // винесений за FAB (Planner.tsx), щоб головний екран лишався розкладом, не формою.
+// Звичні задачі (routineItems) — чіпи-чекбокси, не підставлений у текст рядок (Етап 5,
+// раунд 4): тап перемикає, textarea лишається чистою для нового/унікального.
 export default function TaskInputSheet({
   open,
   onClose,
@@ -13,8 +15,9 @@ export default function TaskInputSheet({
   onPlan,
   loading,
   error,
-  routineHint,
-  setRoutineHint,
+  routineItems,
+  selected,
+  onToggleItem,
   hasResult,
 }: {
   open: boolean;
@@ -24,8 +27,9 @@ export default function TaskInputSheet({
   onPlan: () => Promise<boolean>;
   loading: boolean;
   error: string | null;
-  routineHint: boolean;
-  setRoutineHint: (v: boolean) => void;
+  routineItems: string[];
+  selected: Set<string>;
+  onToggleItem: (title: string) => void;
   hasResult: boolean;
 }) {
   useEffect(() => {
@@ -44,6 +48,9 @@ export default function TaskInputSheet({
 
   if (!open) return null;
 
+  const hasChosen = routineItems.some((t) => selected.has(t));
+  const canSubmit = hasChosen || text.trim() !== "";
+
   async function handlePlan() {
     const ok = await onPlan();
     if (ok) onClose();
@@ -59,20 +66,31 @@ export default function TaskInputSheet({
           </button>
         </div>
 
-        {routineHint && <p className="muted">Підставили твої звичні справи — прибери зайве, додай унікальне.</p>}
+        {routineItems.length > 0 && (
+          <div className="row" style={{ flexWrap: "wrap" }}>
+            {routineItems.map((title) => (
+              <button
+                key={title}
+                type="button"
+                className="chip"
+                aria-pressed={selected.has(title)}
+                onClick={() => onToggleItem(title)}
+              >
+                {title}
+              </button>
+            ))}
+          </div>
+        )}
 
         <textarea
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setRoutineHint(false);
-          }}
-          rows={6}
-          autoFocus
+          onChange={(e) => setText(e.target.value)}
+          rows={routineItems.length > 0 ? 3 : 6}
+          autoFocus={routineItems.length === 0}
           style={{ width: "100%", display: "block" }}
-          placeholder="тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
+          placeholder={routineItems.length > 0 ? "щось нове, чого нема вище" : "тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"}
         />
-        <button className="btn-primary" onClick={handlePlan} disabled={loading || text.trim() === ""}>
+        <button className="btn-primary" onClick={handlePlan} disabled={loading || !canSubmit}>
           {loading ? "Розкладаю…" : "Розкласти план"}
         </button>
 

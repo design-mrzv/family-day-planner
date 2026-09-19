@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
+import { normalizeTaskKey } from "@/lib/solver/config";
 import ScheduleView from "./ScheduleView";
 import TaskInputSheet from "./TaskInputSheet";
 import TaskDetailSheet from "./TaskDetailSheet";
@@ -28,7 +29,11 @@ export default function Planner() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SolverResult | null>(null);
   const [planDate, setPlanDate] = useState<string | null>(null);
-  const [routineHint, setRoutineHint] = useState(false);
+  // Вечірній prefill (Етап 5, раунд 4): звичні задачі — чіпи-чекбокси, не суцільний текст
+  // для ручного редагування. text лишається чистим полем для нового/унікального.
+  const [routineItems, setRoutineItems] = useState<string[]>([]);
+  const [selectedRoutine, setSelectedRoutine] = useState<Set<string>>(new Set());
+  const [colorOverrides, setColorOverrides] = useState<Map<string, number>>(new Map());
   // Дата, на яку реально плануємо — заповнюється автоматично з /api/plan/today.tomorrow
   // (пояс користувача), без ручного поля в UI (гейти пройдено, дебаг-поле більше не потрібне).
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
@@ -119,23 +124,50 @@ export default function Planner() {
     }
   }
 
-  // Памʼять рутини: підставляє звичні справи + перенесене в поле при відкритті,
-  // не перезаписує, якщо людина вже щось написала.
+  // Памʼять рутини: звичні справи + перенесене з учора — чіпи, обрані за замовчуванням.
   useEffect(() => {
     fetch("/api/routine")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data?.prefill) return;
-        setText((cur) => {
-          if (cur.trim() !== "") return cur;
-          setRoutineHint(true);
-          return data.prefill;
-        });
+        const items = (data?.items as string[] | undefined) ?? [];
+        if (items.length === 0) return;
+        setRoutineItems(items);
+        setSelectedRoutine(new Set(items));
       })
       .catch(() => {
         /* мовчки — заготовка не критична */
       });
   }, []);
+
+  // Кольори задач, які людина сама закріпила (Етап 5, раунд 4) — override над авто-хешем.
+  useEffect(() => {
+    fetch("/api/task-color")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.colors) return;
+        setColorOverrides(new Map(Object.entries(data.colors as Record<string, number>)));
+      })
+      .catch(() => {
+        /* мовчки — картки лишаться на авто-хеші */
+      });
+  }, []);
+
+  function onToggleRoutineItem(title: string) {
+    setSelectedRoutine((cur) => {
+      const next = new Set(cur);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }
+
+  function onColorSaved(title: string, colorIndex: number) {
+    setColorOverrides((cur) => {
+      const next = new Map(cur);
+      next.set(normalizeTaskKey(title), colorIndex);
+      return next;
+    });
+  }
 
   useEffect(() => {
     fetch("/api/timezone")
@@ -214,10 +246,12 @@ export default function Planner() {
     setError(null);
     try {
       const today = targetDate; // YYYY-MM-DD
+      const chosen = routineItems.filter((t) => selectedRoutine.has(t));
+      const combinedText = [...chosen, text.trim()].filter((s) => s !== "").join(", ");
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, today }),
+        body: JSON.stringify({ text: combinedText, today }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -252,6 +286,23 @@ export default function Planner() {
     if (res.ok) setResult((await res.json()) as SolverResult);
   }
 
+  // "Перенести → сьогодні (вільний час)" з екрана деталей — findFreeSlot на бекенді,
+  // без прив'язки до конфлікту (той самий роут, що й для конфліктів минулого раунду).
+  async function onMoveToFreeSlotToday(title: string): Promise<{ ok: boolean; message?: string }> {
+    if (!planDate) return { ok: false, message: "Немає активного дня." };
+    const res = await fetch("/api/plan/move-to-free-slot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date: planDate, title }),
+    });
+    if (res.ok) {
+      setResult((await res.json()) as SolverResult);
+      return { ok: true };
+    }
+    const data = await res.json().catch(() => null);
+    return { ok: false, message: data?.message ?? "Не вдалося перенести." };
+  }
+
   // Чекбокс "виконано" — на відміну від "→ завтра", не ховає пункт, лише позначає.
   async function onToggleDone(title: string, done: boolean) {
     if (!planDate) return;
@@ -271,11 +322,12 @@ export default function Planner() {
       onToggleDone={onToggleDone}
       onOpenDetail={setDetailTask}
       isToday={viewingToday}
+      colorOverrides={colorOverrides}
     />
   );
 
   return (
-    <main className="stack" style={{ maxWidth: 600 }}>
+    <main className="stack" style={{ maxWidth: 600, paddingBottom: 96 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Family Day Planner</h1>
         <div className="row">
@@ -445,8 +497,9 @@ export default function Planner() {
             onPlan={onPlan}
             loading={loading}
             error={error}
-            routineHint={routineHint}
-            setRoutineHint={setRoutineHint}
+            routineItems={routineItems}
+            selected={selectedRoutine}
+            onToggleItem={onToggleRoutineItem}
             hasResult={hasResult}
           />
 
@@ -455,6 +508,7 @@ export default function Planner() {
               key={`${detailTask.title}-${detailTask.start}`}
               task={detailTask}
               date={planDate}
+              colorOverrides={colorOverrides}
               onClose={() => setDetailTask(null)}
               onSaved={(r) => {
                 setResult(r);
@@ -464,6 +518,8 @@ export default function Planner() {
                 await onMoveToTomorrow(title);
                 setDetailTask(null);
               }}
+              onMoveToFreeSlotToday={onMoveToFreeSlotToday}
+              onColorSaved={onColorSaved}
             />
           )}
         </>

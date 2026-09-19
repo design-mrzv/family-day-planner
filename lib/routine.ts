@@ -60,8 +60,10 @@ function uniqueTitles(plan: PlanRow): string[] {
 
 // Заготовка на завтра: усе незакрите з останнього дня (падає мовчки, крок 4 спеку)
 // + рутинні справи, обʼєднані з дедуплікацією за назвою. plans — від найновішого.
-export function computePrefill(plans: PlanRow[], threshold = 2): string {
-  if (plans.length === 0) return "";
+// Масив, не рядок (Етап 5, раунд 4) — фронтенд рендерить кожен елемент чіпом-чекбоксом,
+// не суцільним текстом для ручного редагування.
+export function computePrefill(plans: PlanRow[], threshold = 2): string[] {
+  if (plans.length === 0) return [];
 
   const carry = uniqueTitles(plans[0]); // найсвіжіший день першим
   const routine = computeRoutine(plans, threshold);
@@ -75,5 +77,5 @@ export function computePrefill(plans: PlanRow[], threshold = 2): string {
     seen.add(key);
     merged.push(title);
   }
-  return merged.join(", ");
+  return merged;
 }

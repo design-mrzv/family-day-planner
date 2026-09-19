@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
-import { normalizeTaskKey } from "@/lib/solver/config";
+import { resolveColorIndex } from "@/lib/color";
 import DurationEditor from "./DurationEditor";
 
 function timeToMinutes(hhmm: string): number {
@@ -12,16 +12,6 @@ function minutesToLabel(mins: number): string {
   const h = Math.floor(mins / 60) % 24;
   const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-// Чисто візуальний детермінований колір за назвою — НЕ категоризація (LLM тут ні до чого,
-// рахується на клієнті). Той самий заголовок завжди отримує той самий колір з палітри
-// (--palette-1..6, app/globals.css), просто щоб картки різнились на око, як на референсі.
-function paletteIndex(title: string): number {
-  const key = normalizeTaskKey(title);
-  let h = 0;
-  for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) | 0;
-  return (Math.abs(h) % 6) + 1;
 }
 
 type Row =
@@ -64,12 +54,14 @@ function Timeline({
   onToggleDone,
   onOpenDetail,
   isToday,
+  colorOverrides,
 }: {
   items: Scheduled[];
   readOnly: boolean;
   onToggleDone?: (title: string, done: boolean) => void;
   onOpenDetail?: (s: Scheduled) => void;
   isToday: boolean;
+  colorOverrides: Map<string, number>;
 }) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -107,15 +99,16 @@ function Timeline({
             <span />
             <div
               className="timeline-block card"
-              style={{ opacity: done ? 0.6 : 1, cursor: clickable ? "pointer" : undefined, ["--task-color" as string]: `var(--palette-${paletteIndex(s.title)})` }}
+              style={{
+                opacity: done ? 0.6 : 1,
+                cursor: clickable ? "pointer" : undefined,
+                ["--task-color" as string]: `var(--palette-${resolveColorIndex(s.title, colorOverrides)})`,
+              }}
               onClick={clickable ? () => onOpenDetail(s) : undefined}
             >
               <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
                 <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
-                  <span style={{ textDecoration: done ? "line-through" : "none" }}>
-                    {s.title}
-                    {s.type === "fixed" && <span className="badge">фіксовано</span>}
-                  </span>
+                  <span style={{ textDecoration: done ? "line-through" : "none" }}>{s.title}</span>
                   <span className="muted" style={{ fontSize: "0.75rem" }}>
                     {s.start}–{minutesToLabel(timeToMinutes(s.start) + s.duration_min)}
                   </span>
@@ -153,6 +146,7 @@ export default function ScheduleView({
   onDurationSaved,
   onToggleDone,
   onOpenDetail,
+  colorOverrides = new Map(),
 }: {
   result: SolverResult;
   readOnly?: boolean;
@@ -160,6 +154,7 @@ export default function ScheduleView({
   onDurationSaved?: () => void;
   onToggleDone?: (title: string, done: boolean) => void;
   onOpenDetail?: (s: Scheduled) => void;
+  colorOverrides?: Map<string, number>;
 }) {
   if (isEmptyResult(result)) {
     return (
@@ -178,7 +173,14 @@ export default function ScheduleView({
         {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (
-          <Timeline items={visible} readOnly={readOnly} onToggleDone={onToggleDone} onOpenDetail={onOpenDetail} isToday={isToday} />
+          <Timeline
+            items={visible}
+            readOnly={readOnly}
+            onToggleDone={onToggleDone}
+            onOpenDetail={onOpenDetail}
+            isToday={isToday}
+            colorOverrides={colorOverrides}
+          />
         )}
       </div>
 

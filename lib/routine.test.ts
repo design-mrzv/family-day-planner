@@ -58,8 +58,8 @@ describe("computeRoutine", () => {
 });
 
 describe("computePrefill", () => {
-  it("порожня історія → порожній рядок", () => {
-    expect(computePrefill([])).toBe("");
+  it("порожня історія → порожній масив", () => {
+    expect(computePrefill([])).toEqual([]);
   });
 
   it("переносить усе з останнього дня + додає рутину без дублів", () => {
@@ -70,7 +70,7 @@ describe("computePrefill", () => {
       day("2026-09-05", "садок", "вечеря"),
     ];
     // carry: садок, лікар; routine (≥2): садок(3), вечеря(2) → додається лише вечеря
-    expect(computePrefill(plans)).toBe("садок, лікар, вечеря");
+    expect(computePrefill(plans)).toEqual(["садок", "лікар", "вечеря"]);
   });
 
   it("перенесене (moved) з останнього дня теж потрапляє в заготовку", () => {
@@ -80,6 +80,6 @@ describe("computePrefill", () => {
         tasks: { schedule: [{ title: "погуляти", status: "moved" }], overflow: [] },
       },
     ];
-    expect(computePrefill(plans)).toBe("погуляти");
+    expect(computePrefill(plans)).toEqual(["погуляти"]);
   });
 });

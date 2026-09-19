@@ -50,6 +50,13 @@
       "when": 1789466322134,
       "tag": "0006_yielding_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789856124420,
+      "tag": "0007_eager_scalphunter",
+      "breakpoints": true
     }
   ]
 }

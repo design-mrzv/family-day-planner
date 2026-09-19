@@ -137,6 +137,34 @@ button:disabled {
   filter: brightness(1.08);
 }
 
+/* Другорядна дія без рамки/фону — легша за вагою, ніж .btn-primary чи звичайна button
+   (напр. "Перенести…" в TaskDetailSheet: не має конкурувати з "Зберегти" за увагу). */
+.btn-text {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.btn-text:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+/* Чіпи для вибору звичних задач у вечірньому prefill (TaskInputSheet) — тап перемикає
+   aria-pressed, той самий color-mix-прийом, що .icon-chip/timeline-картки. */
+.chip {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -249,16 +277,6 @@ details[open] > .settings-row .chevron {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-.badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-radius: 999px;
-  padding: 2px 8px;
-  margin-left: 8px;
 }
 
 /* Плаваюча кнопка вводу — той самий +FAB, що на референсах календарів/тасків. */

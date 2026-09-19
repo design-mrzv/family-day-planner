@@ -21,6 +21,6 @@ export async function GET() {
     .orderBy(desc(dailyPlans.date))
     .limit(7);
 
-  const prefill = computePrefill(rows as PlanRow[]);
-  return Response.json({ prefill });
+  const items = computePrefill(rows as PlanRow[]);
+  return Response.json({ items });
 }
