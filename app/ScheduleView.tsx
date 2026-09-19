@@ -13,7 +13,7 @@ function minutesToLabel(mins: number): string {
 }
 
 const PX_PER_MIN = 1.2; // 72px/год
-const MIN_BLOCK_HEIGHT = 44; // тач-таргет, а не рівно duration_min — короткі задачі теж мають влазити контроли
+const MIN_BLOCK_HEIGHT = 48; // достатньо для двох компактних рядків (назва + час), а не рівно duration_min
 
 // Timeline: година зліва (сітка + мітки), блоки задач позиціоновані й висотою
 // пропорційні реальному часу/тривалості. Діапазон — НЕ фіксовані 24 год (порожньо й
@@ -66,9 +66,13 @@ function Timeline({
         </div>
       )}
 
-      {items.map((s) => {
+      {items.map((s, i) => {
         const top = (timeToMinutes(s.start) - rangeStart) * PX_PER_MIN;
-        const height = Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT);
+        // items відсортовані за start (solver/reschedule це гарантують) — наступний елемент
+        // визначає межу, за яку MIN_BLOCK_HEIGHT не може заходити (інакше візуально наліз би
+        // на сусідній блок при щільному, але легальному розкладі — буфер лише 10-15 хв).
+        const nextTop = i + 1 < items.length ? (timeToMinutes(items[i + 1].start) - rangeStart) * PX_PER_MIN : totalHeight;
+        const height = Math.min(Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT), Math.max(nextTop - top, s.duration_min * PX_PER_MIN));
         const done = s.status === "done";
         const clickable = !readOnly && onOpenDetail;
         return (
@@ -80,11 +84,20 @@ function Timeline({
           >
             <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start", height: "100%" }}>
               <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
-                <span style={{ textDecoration: done ? "line-through" : "none" }}>
+                <span
+                  style={{
+                    textDecoration: done ? "line-through" : "none",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {s.title}
                   {s.type === "fixed" && <span className="badge">фіксовано</span>}
                 </span>
-                <span className="muted">{s.start}</span>
+                <span className="muted" style={{ fontSize: "0.75rem" }}>
+                  {s.start}–{minutesToLabel(timeToMinutes(s.start) + s.duration_min)}
+                </span>
               </span>
               {!readOnly && (
                 <input
