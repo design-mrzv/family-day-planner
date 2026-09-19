@@ -1,4 +1,6 @@
+import { Fragment } from "react";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
+import { normalizeTaskKey } from "@/lib/solver/config";
 import DurationEditor from "./DurationEditor";
 
 function timeToMinutes(hhmm: string): number {
@@ -12,13 +14,50 @@ function minutesToLabel(mins: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-const PX_PER_MIN = 1.2; // 72px/год
-const MIN_BLOCK_HEIGHT = 48; // достатньо для двох компактних рядків (назва + час), а не рівно duration_min
+// Чисто візуальний детермінований колір за назвою — НЕ категоризація (LLM тут ні до чого,
+// рахується на клієнті). Той самий заголовок завжди отримує той самий колір з палітри
+// (--palette-1..6, app/globals.css), просто щоб картки різнились на око, як на референсі.
+function paletteIndex(title: string): number {
+  const key = normalizeTaskKey(title);
+  let h = 0;
+  for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return (Math.abs(h) % 6) + 1;
+}
 
-// Timeline: година зліва (сітка + мітки), блоки задач позиціоновані й висотою
-// пропорційні реальному часу/тривалості. Діапазон — НЕ фіксовані 24 год (порожньо й
-// довгий скрол на телефоні), а компактний: від першої задачі (і "зараз", якщо isToday)
-// до останньої (і "зараз"), з годинним запасом по краях.
+type Row =
+  | { kind: "hour"; key: string; label: string }
+  | { kind: "now"; key: string }
+  | { kind: "task"; key: string; item: Scheduled };
+
+// Еластичний timeline (Етап 5, раунд 3): без пропорційного пікселі-на-хвилину мапінгу —
+// звичайний document-flow список у CSS Grid (56px мітка години | контент). Висота кожного
+// рядка — його контент, тому навіть 10-15-хвилинні задачі завжди повністю видно, без
+// обрізання й без ризику візуально "наїхати" на сусідній блок (проблема попередніх двох
+// раундів). Компроміс: більше немає пропорційності "великий проміжок = великий відступ" —
+// мітка години зліва лише орієнтир (з'являється при зміні години), не лінійка.
+function buildRows(items: Scheduled[], isToday: boolean, nowMinutes: number): Row[] {
+  const rows: Row[] = [];
+  let lastHour: number | null = null;
+  let nowInserted = !isToday;
+
+  for (const item of items) {
+    const startMin = timeToMinutes(item.start);
+    if (!nowInserted && nowMinutes <= startMin) {
+      rows.push({ kind: "now", key: "now" });
+      nowInserted = true;
+    }
+    const hour = Math.floor(startMin / 60);
+    if (hour !== lastHour) {
+      rows.push({ kind: "hour", key: `hour-${hour}-${item.start}-${item.title}`, label: minutesToLabel(hour * 60) });
+      lastHour = hour;
+    }
+    rows.push({ kind: "task", key: `${item.start}-${item.title}`, item });
+  }
+  if (!nowInserted) rows.push({ kind: "now", key: "now" });
+
+  return rows;
+}
+
 function Timeline({
   items,
   readOnly,
@@ -34,86 +73,69 @@ function Timeline({
 }) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-  const starts = items.map((s) => timeToMinutes(s.start));
-  const ends = items.map((s) => timeToMinutes(s.start) + s.duration_min);
-  const lowCandidates = isToday ? [...starts, nowMinutes] : starts;
-  const highCandidates = isToday ? [...ends, nowMinutes] : ends;
-
-  let rangeStart = Math.floor((Math.min(...lowCandidates) - 60) / 60) * 60;
-  let rangeEnd = Math.ceil((Math.max(...highCandidates) + 60) / 60) * 60;
-  rangeStart = Math.max(0, rangeStart);
-  rangeEnd = Math.min(24 * 60, rangeEnd);
-
-  const hours: number[] = [];
-  for (let t = rangeStart; t <= rangeEnd; t += 60) hours.push(t);
-
-  const totalHeight = (rangeEnd - rangeStart) * PX_PER_MIN;
-  const showNowLine = isToday && nowMinutes >= rangeStart && nowMinutes <= rangeEnd;
+  const rows = buildRows(items, isToday, nowMinutes);
+  const clickable = !readOnly && onOpenDetail;
 
   return (
-    <div className="timeline" style={{ height: totalHeight }}>
-      {hours.map((t) => (
-        <div key={t} className="timeline-hour" style={{ top: (t - rangeStart) * PX_PER_MIN }}>
-          <span className="timeline-hour-label">{minutesToLabel(t)}</span>
-          <span className="timeline-hour-line" />
-        </div>
-      ))}
+    <div className="timeline-grid">
+      {rows.map((row) => {
+        if (row.kind === "hour") {
+          return (
+            <Fragment key={row.key}>
+              <span className="timeline-hour-label">{row.label}</span>
+              <span className="timeline-hour-line" />
+            </Fragment>
+          );
+        }
+        if (row.kind === "now") {
+          return (
+            <Fragment key={row.key}>
+              <span />
+              <div className="now-row">
+                <span className="now-dot" />
+                Зараз
+                <span style={{ flex: 1, height: 1, background: "var(--accent)" }} />
+              </div>
+            </Fragment>
+          );
+        }
 
-      {showNowLine && (
-        <div className="now-line" style={{ top: (nowMinutes - rangeStart) * PX_PER_MIN }}>
-          <span className="now-dot" />
-        </div>
-      )}
-
-      {items.map((s, i) => {
-        const top = (timeToMinutes(s.start) - rangeStart) * PX_PER_MIN;
-        // items відсортовані за start (solver/reschedule це гарантують) — наступний елемент
-        // визначає межу, за яку MIN_BLOCK_HEIGHT не може заходити (інакше візуально наліз би
-        // на сусідній блок при щільному, але легальному розкладі — буфер лише 10-15 хв).
-        const nextTop = i + 1 < items.length ? (timeToMinutes(items[i + 1].start) - rangeStart) * PX_PER_MIN : totalHeight;
-        const height = Math.min(Math.max(s.duration_min * PX_PER_MIN, MIN_BLOCK_HEIGHT), Math.max(nextTop - top, s.duration_min * PX_PER_MIN));
+        const s = row.item;
         const done = s.status === "done";
-        const clickable = !readOnly && onOpenDetail;
         return (
-          <div
-            key={`${s.start}-${s.title}`}
-            className="timeline-block card"
-            style={{ top, height, opacity: done ? 0.6 : 1, cursor: clickable ? "pointer" : undefined }}
-            onClick={clickable ? () => onOpenDetail(s) : undefined}
-          >
-            <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start", height: "100%" }}>
-              <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
-                <span
-                  style={{
-                    textDecoration: done ? "line-through" : "none",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {s.title}
-                  {s.type === "fixed" && <span className="badge">фіксовано</span>}
+          <Fragment key={row.key}>
+            <span />
+            <div
+              className="timeline-block card"
+              style={{ opacity: done ? 0.6 : 1, cursor: clickable ? "pointer" : undefined, ["--task-color" as string]: `var(--palette-${paletteIndex(s.title)})` }}
+              onClick={clickable ? () => onOpenDetail(s) : undefined}
+            >
+              <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
+                <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
+                  <span style={{ textDecoration: done ? "line-through" : "none" }}>
+                    {s.title}
+                    {s.type === "fixed" && <span className="badge">фіксовано</span>}
+                  </span>
+                  <span className="muted" style={{ fontSize: "0.75rem" }}>
+                    {s.start}–{minutesToLabel(timeToMinutes(s.start) + s.duration_min)}
+                  </span>
                 </span>
-                <span className="muted" style={{ fontSize: "0.75rem" }}>
-                  {s.start}–{minutesToLabel(timeToMinutes(s.start) + s.duration_min)}
-                </span>
-              </span>
-              {!readOnly && (
-                <input
-                  type="checkbox"
-                  checked={done}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    onToggleDone?.(s.title, e.target.checked);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
-                  style={{ width: 18, height: 18, flexShrink: 0 }}
-                />
-              )}
+                {!readOnly && (
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onToggleDone?.(s.title, e.target.checked);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
+                    style={{ width: 18, height: 18, flexShrink: 0 }}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          </Fragment>
         );
       })}
     </div>
@@ -156,13 +178,7 @@ export default function ScheduleView({
         {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (
-          <Timeline
-            items={visible}
-            readOnly={readOnly}
-            onToggleDone={onToggleDone}
-            onOpenDetail={onOpenDetail}
-            isToday={isToday}
-          />
+          <Timeline items={visible} readOnly={readOnly} onToggleDone={onToggleDone} onOpenDetail={onOpenDetail} isToday={isToday} />
         )}
       </div>
 

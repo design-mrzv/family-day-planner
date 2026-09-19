@@ -12,6 +12,14 @@
   --danger: #b3261e;
   --radius: 10px;
   --font-sans: var(--font-inter), system-ui, sans-serif;
+  /* Чисто візуальна палітра для timeline-карток (Етап 5, раунд 3) — детермінований хеш
+     назви обирає одну з 6, НЕ категоризація (див. app/ScheduleView.tsx: paletteIndex). */
+  --palette-1: #3d6da8;
+  --palette-2: #7c5a9e;
+  --palette-3: #4a8a5c;
+  --palette-4: #a86b2e;
+  --palette-5: #a8496f;
+  --palette-6: #55628a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,6 +32,12 @@
     --accent: #4f9a95;
     --accent-contrast: #0d1f1e;
     --danger: #f2836b;
+    --palette-1: #7aa8dd;
+    --palette-2: #b39bd6;
+    --palette-3: #7fc192;
+    --palette-4: #d99a57;
+    --palette-5: #d98cae;
+    --palette-6: #99a7d1;
   }
 }
 
@@ -293,61 +307,47 @@ details[open] > .settings-row .chevron {
   }
 }
 
-/* Timeline-розклад — година зліва (сітка + мітки), блоки позиціоновані/висотою
-   пропорційні реальному часу. Ліва "колонка" — padding-left, мітки/лінії/блоки
-   абсолютно позиціоновані всередині. */
-.timeline {
-  position: relative;
-  padding-left: 56px;
-}
-
-.timeline-hour {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
+/* Еластичний timeline (Етап 5, раунд 3) — CSS Grid 56px|1fr замість абсолютного
+   пікселі-на-хвилину позиціонування. Висота кожного рядка (мітка години/задача/"зараз") —
+   її природний контент, ніколи не обрізається й ніколи не наїжджає на сусідній рядок. */
+.timeline-grid {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 8px;
+  row-gap: 8px;
+  align-items: start;
 }
 
 .timeline-hour-label {
-  position: absolute;
-  left: 0;
-  top: -8px;
-  width: 48px;
   font-size: 0.75rem;
   color: var(--text-muted);
+  align-self: center;
 }
 
 .timeline-hour-line {
-  position: absolute;
-  left: 56px;
-  right: 0;
-  top: 0;
+  align-self: center;
   border-top: 1px solid var(--border);
 }
 
 .timeline-block {
-  position: absolute;
-  left: 56px;
-  right: 0;
-  padding: 6px 12px;
-  overflow: hidden;
+  padding: 8px 12px;
+  border-left: 3px solid var(--task-color, var(--border));
+  background: color-mix(in srgb, var(--task-color, var(--accent)) 8%, var(--surface));
 }
 
-.now-line {
-  position: absolute;
-  left: 56px;
-  right: 0;
-  height: 2px;
-  background: var(--accent);
-  z-index: 1;
+.now-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .now-dot {
-  position: absolute;
-  left: -5px;
-  top: -4px;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: var(--accent);
+  flex-shrink: 0;
 }
