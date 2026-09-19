@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth/getSession";
-import { db } from "@/lib/db/client";
-import { durationOverrides } from "@/lib/db/schema";
-import { normalizeTaskKey } from "@/lib/solver/config";
+import { saveDurationOverride } from "@/lib/duration";
 
 export const runtime = "nodejs";
 
@@ -34,14 +32,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const taskKey = normalizeTaskKey(parsed.data.title);
-  await db
-    .insert(durationOverrides)
-    .values({ userId: session.userId, taskKey, durationMin: parsed.data.duration_min })
-    .onConflictDoUpdate({
-      target: [durationOverrides.userId, durationOverrides.taskKey],
-      set: { durationMin: parsed.data.duration_min, updatedAt: new Date() },
-    });
+  await saveDurationOverride(session.userId, parsed.data.title, parsed.data.duration_min);
 
   return Response.json({ ok: true });
 }

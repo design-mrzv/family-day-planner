@@ -17,14 +17,14 @@ import {
 // Памʼять тривалостей (Етап 2): normalizeTaskKey(title) → хвилини. Порожня Map — як Етап 1.
 export type DurationOverrides = Map<string, number>;
 
-interface Interval {
+export interface Interval {
   start: number;
   end: number;
   buffer: number; // мінімальний відступ до цієї справи (збори+дорога), понад BUFFER_MIN
 }
 
 // Чи вміщується [s, s+d] у вільне місце з буфером до кожної зайнятої справи.
-function fits(s: number, d: number, occupied: Interval[]): boolean {
+export function fits(s: number, d: number, occupied: Interval[]): boolean {
   for (const o of occupied) {
     const gap = Math.max(BUFFER_MIN, o.buffer);
     const clear = s >= o.end + gap || s + d <= o.start - gap;
@@ -34,7 +34,7 @@ function fits(s: number, d: number, occupied: Interval[]): boolean {
 }
 
 // Найраніший старт для гнучкої справи у вікні [lo, hi] з тривалістю d. null — не влізає.
-function placeFlexible(lo: number, hi: number, d: number, occupied: Interval[]): number | null {
+export function placeFlexible(lo: number, hi: number, d: number, occupied: Interval[]): number | null {
   const lo2 = Math.max(lo, toMin(WORK_START));
   const hi2 = Math.min(hi, toMin(FLEXIBLE_END)); // остання година перед сном — захищена
 
@@ -52,6 +52,21 @@ function placeFlexible(lo: number, hi: number, d: number, occupied: Interval[]):
 // Тривалість: спершу перевірена мамою правка (Етап 2), інакше дефолт зі словника.
 function resolveDuration(title: string, overrides: DurationOverrides): number {
   return overrides.get(normalizeTaskKey(title)) ?? durationFor(title);
+}
+
+// Ручне редагування часу задачі (Етап 5): чи перетинаються два інтервали на таймлайні.
+// Буквальне накладання, без буфера — той самий примітив, що конфлікт-детекція фіксованих
+// справ вище (рядок 85), лише перевикористаний для ручних правок часу з UI.
+export function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+// Вільний слот для "збитої" конфліктом задачі — той самий пошук, що solver використовує
+// для гнучких справ при первинному плануванні, лише викликаний ззовні (API-роут ручного
+// редагування). Жодної нової логіки розкладання — тільки реюз.
+export function findFreeSlot(durationMin: number, occupied: Interval[]): string | null {
+  const start = placeFlexible(toMin(WORK_START), toMin(FLEXIBLE_END), durationMin, occupied);
+  return start == null ? null : toHHMM(start);
 }
 
 // Детермінований розкладальник. Той самий вхід (+ ті самі overrides) → той самий вихід.
