@@ -331,6 +331,7 @@ details[open] > .settings-row .chevron {
    рендериться через внутрішній WebKit-псевдоелемент, який треба стилізувати окремо. */
 input[type="time"]::-webkit-date-and-time-value {
   text-align: center;
+  width: 100%;
 }
 
 @media (min-width: 640px) {

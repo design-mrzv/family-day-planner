@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react/dist/ssr";
 import { toMin, toHHMM } from "@/lib/solver/config";
 import { resolveColorIndex } from "@/lib/color";
@@ -51,6 +51,26 @@ export default function TaskDetailSheet({
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const [moving, setMoving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+
+  // Safari на iOS ігнорує будь-яку відносну ширину (fr/%/flex-grow) для input[type=time] —
+  // нативний контрол інколи рендериться на свою внутрішню мінімальну ширину і вилазить
+  // за межі computed-треку (реальний баг, не відтворюється в Chromium). Єдиний надійний
+  // обхід — виміряти контейнер у пікселях і задати input фіксовану, не відносну, ширину.
+  const timeRowRef = useRef<HTMLDivElement>(null);
+  const [timeFieldWidth, setTimeFieldWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const el = timeRowRef.current;
+    if (!el) return;
+    const GAP = 32;
+    function measure() {
+      if (!el) return;
+      setTimeFieldWidth((el.clientWidth - GAP) / 2);
+    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -142,8 +162,8 @@ export default function TaskDetailSheet({
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-          <div className="field" style={{ maxWidth: "none", minWidth: 0 }}>
+        <div ref={timeRowRef} className="row" style={{ flexWrap: "nowrap", gap: 32 }}>
+          <div className="field" style={{ maxWidth: "none", width: timeFieldWidth ?? undefined, flexShrink: 0 }}>
             <span className="field-label">Початок</span>
             <input
               type="time"
@@ -152,7 +172,7 @@ export default function TaskDetailSheet({
               style={{ display: "block", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}
             />
           </div>
-          <div className="field" style={{ maxWidth: "none", minWidth: 0 }}>
+          <div className="field" style={{ maxWidth: "none", width: timeFieldWidth ?? undefined, flexShrink: 0 }}>
             <span className="field-label">Кінець</span>
             <input
               type="time"
