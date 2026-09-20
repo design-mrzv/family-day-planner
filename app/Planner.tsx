@@ -164,6 +164,10 @@ export default function Planner() {
     });
   }
 
+  function onToggleAllRoutine(selectAll: boolean) {
+    setSelectedRoutine(selectAll ? new Set(routineItems) : new Set());
+  }
+
   function onColorSaved(title: string, colorIndex: number) {
     setColorOverrides((cur) => {
       const next = new Map(cur);
@@ -531,6 +535,7 @@ export default function Planner() {
             routineItems={routineItems}
             selected={selectedRoutine}
             onToggleItem={onToggleRoutineItem}
+            onToggleAllRoutine={onToggleAllRoutine}
             hasResult={hasResult}
           />
 

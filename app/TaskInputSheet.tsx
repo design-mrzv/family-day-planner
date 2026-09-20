@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "@phosphor-icons/react/dist/ssr";
+import { X, CaretRight } from "@phosphor-icons/react/dist/ssr";
 
 type AddConflict = { newTitle: string; withTitle: string; withStart: string };
 type AddTodayResult = { ok: boolean; message?: string; conflicts?: AddConflict[] };
@@ -25,6 +25,7 @@ export default function TaskInputSheet({
   routineItems,
   selected,
   onToggleItem,
+  onToggleAllRoutine,
   hasResult,
 }: {
   open: boolean;
@@ -38,6 +39,7 @@ export default function TaskInputSheet({
   routineItems: string[];
   selected: Set<string>;
   onToggleItem: (title: string) => void;
+  onToggleAllRoutine: (selectAll: boolean) => void;
   hasResult: boolean;
 }) {
   const [target, setTarget] = useState<"today" | "tomorrow">("tomorrow");
@@ -116,19 +118,33 @@ export default function TaskInputSheet({
         </div>
 
         {target === "tomorrow" && routineItems.length > 0 && (
-          <div className="row" style={{ flexWrap: "wrap" }}>
-            {routineItems.map((title) => (
-              <button
-                key={title}
-                type="button"
-                className="chip"
-                aria-pressed={selected.has(title)}
-                onClick={() => onToggleItem(title)}
-              >
-                {title}
-              </button>
-            ))}
-          </div>
+          <details className="card">
+            <summary className="settings-row row" style={{ justifyContent: "space-between" }}>
+              <span>Рутинні задачі</span>
+              <span className="row">
+                <span className="muted">
+                  {routineItems.filter((t) => selected.has(t)).length} з {routineItems.length} обрано
+                </span>
+                <CaretRight size={14} className="chevron" />
+              </span>
+            </summary>
+            <div className="stack" style={{ marginTop: 12 }}>
+              <label className="row" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={routineItems.every((t) => selected.has(t))}
+                  onChange={(e) => onToggleAllRoutine(e.target.checked)}
+                />
+                <span className="muted">Обрати всі</span>
+              </label>
+              {routineItems.map((title) => (
+                <label key={title} className="row" style={{ cursor: "pointer" }}>
+                  <input type="checkbox" checked={selected.has(title)} onChange={() => onToggleItem(title)} />
+                  {title}
+                </label>
+              ))}
+            </div>
+          </details>
         )}
 
         <textarea
