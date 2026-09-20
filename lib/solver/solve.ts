@@ -64,13 +64,20 @@ export function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: num
 // Вільний слот для "збитої" конфліктом задачі — той самий пошук, що solver використовує
 // для гнучких справ при первинному плануванні, лише викликаний ззовні (API-роут ручного
 // редагування). Жодної нової логіки розкладання — тільки реюз.
-export function findFreeSlot(durationMin: number, occupied: Interval[]): string | null {
-  const start = placeFlexible(toMin(WORK_START), toMin(FLEXIBLE_END), durationMin, occupied);
+// minStart (хв від півночі, опційно) — не пропонувати час РАНІШЕ за нього: FAB "Сьогодні"
+// передає поточний момент, щоб не ставити задачу в минуле дня.
+export function findFreeSlot(durationMin: number, occupied: Interval[], minStart?: number): string | null {
+  const lo = minStart != null ? Math.max(toMin(WORK_START), minStart) : toMin(WORK_START);
+  const start = placeFlexible(lo, toMin(FLEXIBLE_END), durationMin, occupied);
   return start == null ? null : toHHMM(start);
 }
 
 // Детермінований розкладальник. Той самий вхід (+ ті самі overrides) → той самий вихід.
-export function solve(tasks: Task[], durationOverrides: DurationOverrides = new Map()): SolverResult {
+// minStartMinutes (хв від півночі, опційно) — гнучкі справи не стають раніше за нього.
+// За замовчуванням 0 (без обмеження — вечірнє планування НА ЗАВТРА, де "зараз" не має
+// значення). FAB "Сьогодні" без існуючого плану (планування "з нуля" посеред дня)
+// передає поточний момент, щоб не отримати задачу в минулому дня.
+export function solve(tasks: Task[], durationOverrides: DurationOverrides = new Map(), minStartMinutes = 0): SolverResult {
   const schedule: Scheduled[] = [];
   const overflow: OverflowItem[] = [];
   const deadlines: Deadline[] = [];
@@ -127,7 +134,7 @@ export function solve(tasks: Task[], durationOverrides: DurationOverrides = new 
   meta.sort((a, b) => Number(b.constrained) - Number(a.constrained) || a.i - b.i);
 
   for (const m of meta) {
-    const start = placeFlexible(m.lo, m.hi, m.d, occupied);
+    const start = placeFlexible(Math.max(m.lo, minStartMinutes), m.hi, m.d, occupied);
     if (start == null) {
       // 6. Що не влізло → overflow. НЕ стискаємо, НЕ викидаємо мовчки.
       overflow.push({ title: m.task.title, duration_min: m.d, reason: "no_slot" });

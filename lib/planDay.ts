@@ -8,7 +8,10 @@ import { durationOverrides as durationOverridesTable, dailyPlans } from "./db/sc
 // Спільне ядро для веб (/api/plan) і Telegram (webhook): текст → tasks[] → розклад →
 // збереження. Кидає ParseError/ServiceError з lib/parser/parseTasks — виклик сам вирішує,
 // як показати помилку користувачу (JSON-відповідь чи повідомлення в чат).
-export async function planAndSaveDay(userId: string, text: string, date: string): Promise<SolverResult> {
+// minStartMinutes: прокидається в solve() — FAB "Сьогодні" без існуючого плану передає
+// поточний момент дня, щоб гнучкі справи не поставило в минуле (0 = без обмеження,
+// звичайне вечірнє планування на завтра).
+export async function planAndSaveDay(userId: string, text: string, date: string, minStartMinutes = 0): Promise<SolverResult> {
   const parsed = await parseTasks(text, date); // LLM: текст → tasks[]
 
   const overrideRows = await db
@@ -17,7 +20,7 @@ export async function planAndSaveDay(userId: string, text: string, date: string)
     .where(eq(durationOverridesTable.userId, userId));
   const overrides: DurationOverrides = new Map(overrideRows.map((r) => [r.taskKey, r.durationMin]));
 
-  const result = solve(parsed.tasks, overrides); // детермінований solver: tasks[] → розклад
+  const result = solve(parsed.tasks, overrides, minStartMinutes); // детермінований solver: tasks[] → розклад
 
   await db
     .insert(dailyPlans)

@@ -220,4 +220,16 @@ describe("solve", () => {
     const tasks = [task("тренування"), task("вечеря"), task("забрати", "15:00")];
     expect(solve(tasks)).toEqual(solve(tasks));
   });
+
+  it("minStartMinutes: гнучка справа не стає раніше за нього (FAB 'Сьогодні' посеред дня)", () => {
+    const elevenAm = 11 * 60;
+    const r = solve([task("йога")], new Map(), elevenAm);
+    expect(r.schedule).toHaveLength(1);
+    expect(toMin(r.schedule[0].start)).toBeGreaterThanOrEqual(elevenAm);
+  });
+
+  it("minStartMinutes за замовчуванням 0 — не змінює поведінку вечірнього планування", () => {
+    const tasks = [task("тренування"), task("вечеря")];
+    expect(solve(tasks)).toEqual(solve(tasks, new Map(), 0));
+  });
 });

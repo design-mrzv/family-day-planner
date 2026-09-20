@@ -21,6 +21,17 @@ export function hourInTz(timezone: string): number {
   return Number(parts.find((p) => p.type === "hour")?.value);
 }
 
+// Поточний момент (хв від півночі, 0-1439) у заданому поясі — FAB "Сьогодні" передає це
+// в placeNewTasks, щоб нову гнучку задачу не ставило в минуле дня (раніше за "зараз").
+export function minutesInTz(timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(
+    new Date(),
+  );
+  const hour = Number(parts.find((p) => p.type === "hour")?.value);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value);
+  return hour * 60 + minute;
+}
+
 // Валідний IANA timezone-рядок? (Intl кидає RangeError на невідомий/сміттєвий рядок.)
 export function isValidTimezone(timezone: string): boolean {
   try {

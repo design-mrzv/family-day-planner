@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/getSession";
 import { db } from "@/lib/db/client";
 import { users, dailyPlans, durationOverrides as durationOverridesTable } from "@/lib/db/schema";
-import { dateStringInTz, DEFAULT_TIMEZONE } from "@/lib/timezone";
+import { dateStringInTz, minutesInTz, DEFAULT_TIMEZONE } from "@/lib/timezone";
 import { parseTasks, ParseError, ServiceError } from "@/lib/parser/parseTasks";
 import { planAndSaveDay } from "@/lib/planDay";
 import { placeNewTasks } from "@/lib/solver/addTasks";
@@ -19,7 +19,9 @@ const BodySchema = z.strictObject({
 
 // FAB "Сьогодні" (Етап 5) — додати нову(і) задачу(і) в СЬОГОДНІШНІй день, а не переписати
 // його: /api/plan (planAndSaveDay) — повний перезапис з нуля, тут навмисно інакше. Дата —
-// тільки серверна (як api/plan/today), клієнт її не передає.
+// тільки серверна (як api/plan/today), клієнт її не передає. minutesInTz(timezone) —
+// гнучкі нові задачі не можуть стати раніше за поточний момент дня (інакше "додай на
+// сьогодні" о 11:12 могло б поставити задачу на 07:00 — уже минуле).
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
@@ -49,9 +51,10 @@ export async function POST(request: Request) {
     .limit(1);
 
   try {
-    // Нема плану на сьогодні взагалі — немає що домержувати, звичайний перший план дня.
+    // Нема плану на сьогодні взагалі — немає що домержувати, звичайний перший план дня,
+    // але з тим самим обмеженням "не раніше за зараз" (день уже почався).
     if (!row) {
-      const result = await planAndSaveDay(session.userId, parsed.data.text, today);
+      const result = await planAndSaveDay(session.userId, parsed.data.text, today, minutesInTz(timezone));
       return Response.json(result);
     }
 
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
     const overrides: DurationOverrides = new Map(overrideRows.map((r) => [r.taskKey, r.durationMin]));
 
     const tasks = row.tasks as SolverResult;
-    const outcome = placeNewTasks(llmParsed.tasks, tasks, overrides, parsed.data.resolve_conflict ?? false);
+    const outcome = placeNewTasks(llmParsed.tasks, tasks, overrides, parsed.data.resolve_conflict ?? false, minutesInTz(timezone));
     if (!outcome.ok) {
       return Response.json({ error: "time_conflict", conflicts: outcome.conflicts }, { status: 409 });
     }

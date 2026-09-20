@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { placeNewTasks } from "./addTasks";
+import { toMin } from "./config";
 import type { SolverResult, Scheduled } from "./types";
 import type { Task } from "../parser/schema";
 
@@ -78,5 +79,22 @@ describe("placeNewTasks", () => {
     const vecherya = existing.schedule.find((s) => s.title === "вечеря");
     expect(vecherya?.status).toBe("done");
     expect(vecherya?.start).toBe("18:00");
+  });
+
+  it("minStartMinutes: гнучка нова задача не стає раніше за поточний момент дня", () => {
+    const existing = empty();
+    const elevenAm = 11 * 60;
+    const res = placeNewTasks([task("зателефонувати лікарю")], existing, new Map(), false, elevenAm);
+    expect(res).toEqual({ ok: true });
+    expect(toMin(existing.schedule[0].start)).toBeGreaterThanOrEqual(elevenAm);
+  });
+
+  it("minStartMinutes: конфліктну ІСНУЮЧУ задачу теж не зсуває в минуле дня", () => {
+    const existing: SolverResult = { schedule: [scheduled("робота", "12:00", 60, "fixed")], overflow: [], deadlines: [] };
+    const elevenAm = 11 * 60;
+    const res = placeNewTasks([task("зустріч", "12:15")], existing, new Map(), true, elevenAm);
+    expect(res).toEqual({ ok: true });
+    const robota = existing.schedule.find((s) => s.title === "робота")!;
+    expect(toMin(robota.start)).toBeGreaterThanOrEqual(elevenAm);
   });
 });

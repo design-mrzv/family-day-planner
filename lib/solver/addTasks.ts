@@ -29,6 +29,7 @@ export function placeNewTasks(
   existing: SolverResult,
   durationOverrides: DurationOverrides,
   resolveConflicts: boolean,
+  minStartMinutes = 0,
 ): { ok: true } | { ok: false; conflicts: AddConflict[] } {
   const dayTasks: Task[] = [];
   for (const t of newTasks) {
@@ -55,7 +56,7 @@ export function placeNewTasks(
         continue;
       }
       for (const c of clashing) {
-        const freeStart = findFreeSlot(c.duration_min, occupiedFrom(existing.schedule.filter((s) => s !== c)));
+        const freeStart = findFreeSlot(c.duration_min, occupiedFrom(existing.schedule.filter((s) => s !== c)), minStartMinutes);
         if (freeStart != null) c.start = freeStart;
         else {
           existing.schedule = existing.schedule.filter((s) => s !== c);
@@ -75,7 +76,7 @@ export function placeNewTasks(
     const rw = ruleWindow(t.title) ?? windowForHint(t.time_hint);
     const [lo, hi] = rw ?? [toMin(WORK_START), toMin(WORK_END)];
     const occupied = occupiedFrom(existing.schedule);
-    const start = placeFlexible(lo, hi, d, occupied);
+    const start = placeFlexible(Math.max(lo, minStartMinutes), hi, d, occupied);
     if (start == null) {
       existing.overflow.push({ title: t.title, duration_min: d, reason: "no_slot" });
     } else {
