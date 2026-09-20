@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Clock } from "@phosphor-icons/react/dist/ssr";
+import { X } from "@phosphor-icons/react/dist/ssr";
 import { toMin, toHHMM } from "@/lib/solver/config";
 import { resolveColorIndex } from "@/lib/color";
 import type { Scheduled, SolverResult } from "@/lib/solver/types";
@@ -131,7 +131,7 @@ export default function TaskDetailSheet({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
-          <p style={{ flex: 1, minWidth: 0, fontSize: "1.15rem", fontWeight: 600 }}>{task.title}</p>
+          <p style={{ flex: 1, minWidth: 0, fontSize: "1.15rem", fontWeight: 600 }}>Задача</p>
           <button onClick={onClose} aria-label="Закрити" className="icon-btn" style={{ flexShrink: 0 }}>
             <X size={18} />
           </button>
@@ -142,19 +142,13 @@ export default function TaskDetailSheet({
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
         </div>
 
-        <div className="row" style={{ flexWrap: "nowrap", gap: 16 }}>
-          <div className="field" style={{ flex: 1, maxWidth: "none" }}>
-            <span className="field-label row" style={{ gap: 4 }}>
-              <Clock size={14} />
-              Початок
-            </span>
+        <div className="row" style={{ flexWrap: "nowrap", gap: 20 }}>
+          <div className="field" style={{ flex: 1, maxWidth: "none", minWidth: 0 }}>
+            <span className="field-label">Початок</span>
             <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: "100%" }} />
           </div>
-          <div className="field" style={{ flex: 1, maxWidth: "none" }}>
-            <span className="field-label row" style={{ gap: 4 }}>
-              <Clock size={14} />
-              Кінець
-            </span>
+          <div className="field" style={{ flex: 1, maxWidth: "none", minWidth: 0 }}>
+            <span className="field-label">Кінець</span>
             <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ width: "100%" }} />
           </div>
         </div>

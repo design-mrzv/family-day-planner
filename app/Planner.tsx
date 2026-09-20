@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
+import type { SolverResult, Scheduled } from "@/lib/solver/types";
 import { normalizeTaskKey } from "@/lib/solver/config";
 import ScheduleView from "./ScheduleView";
 import TaskInputSheet from "./TaskInputSheet";
@@ -348,10 +348,10 @@ export default function Planner() {
     if (res.ok) setResult((await res.json()) as SolverResult);
   }
 
-  const hasResult = result !== null && !isEmptyResult(result);
-  const scheduleView = result && (
+  const scheduleView = result && planDate && (
     <ScheduleView
       result={result}
+      date={planDate}
       onDurationSaved={onPlan}
       onToggleDone={onToggleDone}
       onOpenDetail={setDetailTask}
@@ -536,7 +536,6 @@ export default function Planner() {
             selected={selectedRoutine}
             onToggleItem={onToggleRoutineItem}
             onToggleAllRoutine={onToggleAllRoutine}
-            hasResult={hasResult}
           />
 
           {detailTask && planDate && (

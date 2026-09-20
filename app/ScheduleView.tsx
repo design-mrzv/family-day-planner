@@ -16,6 +16,14 @@ function minutesToLabel(mins: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// Заголовок замість статичного "Розклад" — дата показаного плану ("20 вересня"), не
+// завжди "сьогодні": та сама розмітка показує і щойно розкладене "завтра".
+function formatHeaderDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long" }).format(date);
+}
+
 type Row =
   | { kind: "hour"; key: string; label: string }
   | { kind: "now"; key: string }
@@ -116,7 +124,7 @@ function Timeline({
               }}
               onClick={clickable ? () => onOpenDetail(s) : undefined}
             >
-              <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
+              <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "center" }}>
                 <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                   <span style={{ textDecoration: done ? "line-through" : "none" }}>{s.title}</span>
                   <span className="muted" style={{ fontSize: "0.75rem" }}>
@@ -133,7 +141,7 @@ function Timeline({
                     }}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={done ? "Позначити невиконаним" : "Позначити виконаним"}
-                    style={{ width: 18, height: 18, flexShrink: 0 }}
+                    style={{ width: 24, height: 24, flexShrink: 0 }}
                   />
                 )}
               </div>
@@ -151,6 +159,7 @@ function Timeline({
 // межа з PRODUCT_SPEC_v2 розділ 4 крок 6: партнер тільки дивиться.
 export default function ScheduleView({
   result,
+  date,
   readOnly = false,
   isToday = false,
   onDurationSaved,
@@ -160,6 +169,7 @@ export default function ScheduleView({
   onMoveToFreeSlotToday,
 }: {
   result: SolverResult;
+  date: string;
   readOnly?: boolean;
   isToday?: boolean;
   onDurationSaved?: () => void;
@@ -193,7 +203,7 @@ export default function ScheduleView({
   return (
     <div className="stack" style={{ marginTop: 16, maxWidth: 600 }}>
       <div>
-        <h2>Розклад</h2>
+        <h2>{formatHeaderDate(date)}</h2>
         {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (

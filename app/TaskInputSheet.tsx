@@ -26,7 +26,6 @@ export default function TaskInputSheet({
   selected,
   onToggleItem,
   onToggleAllRoutine,
-  hasResult,
 }: {
   open: boolean;
   onClose: () => void;
@@ -40,7 +39,6 @@ export default function TaskInputSheet({
   selected: Set<string>;
   onToggleItem: (title: string) => void;
   onToggleAllRoutine: (selectAll: boolean) => void;
-  hasResult: boolean;
 }) {
   const [target, setTarget] = useState<"today" | "tomorrow">("tomorrow");
   const [addingToday, setAddingToday] = useState(false);
@@ -100,9 +98,7 @@ export default function TaskInputSheet({
     <div className="modal-backdrop" onClick={resetAndClose}>
       <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
-          <p style={{ flex: 1, minWidth: 0 }}>
-            {target === "today" ? "Додай задачу на сьогодні." : hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}
-          </p>
+          <p style={{ flex: 1, minWidth: 0, fontSize: "1.15rem", fontWeight: 700 }}>Додати задачу</p>
           <button onClick={resetAndClose} aria-label="Закрити" className="icon-btn" style={{ flexShrink: 0 }}>
             <X size={18} />
           </button>
