@@ -18,7 +18,7 @@ function minutesToLabel(mins: number): string {
 
 // Заголовок замість статичного "Розклад" — дата показаного плану ("20 вересня"), не
 // завжди "сьогодні": та сама розмітка показує і щойно розкладене "завтра".
-function formatHeaderDate(dateStr: string): string {
+export function formatHeaderDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   return new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long" }).format(date);
@@ -167,6 +167,7 @@ export default function ScheduleView({
   onOpenDetail,
   colorOverrides = new Map(),
   onMoveToFreeSlotToday,
+  showDate = true,
 }: {
   result: SolverResult;
   date: string;
@@ -177,6 +178,7 @@ export default function ScheduleView({
   onOpenDetail?: (s: Scheduled) => void;
   colorOverrides?: Map<string, number>;
   onMoveToFreeSlotToday?: (title: string) => Promise<{ ok: boolean; message?: string }>;
+  showDate?: boolean;
 }) {
   const [fittingTitle, setFittingTitle] = useState<string | null>(null);
   const [fitError, setFitError] = useState<{ title: string; message: string } | null>(null);
@@ -203,7 +205,7 @@ export default function ScheduleView({
   return (
     <div className="stack" style={{ marginTop: 16, maxWidth: 600 }}>
       <div>
-        <h2>{formatHeaderDate(date)}</h2>
+        {showDate && <h2>{formatHeaderDate(date)}</h2>}
         {visible.length === 0 ? (
           <p className="muted">Порожньо.</p>
         ) : (

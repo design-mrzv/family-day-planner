@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { SolverResult, Scheduled } from "@/lib/solver/types";
 import { normalizeTaskKey } from "@/lib/solver/config";
-import ScheduleView from "./ScheduleView";
+import ScheduleView, { formatHeaderDate } from "./ScheduleView";
 import TaskInputSheet from "./TaskInputSheet";
 import TaskDetailSheet from "./TaskDetailSheet";
 
@@ -38,8 +38,9 @@ export default function Planner() {
   // (пояс користувача), без ручного поля в UI (гейти пройдено, дебаг-поле більше не потрібне).
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
   // Сьогодні за поясом користувача (з /api/plan/today.date) — для FAB "Сьогодні"
-  // (onAddToday), щоб не покладатись на дату браузера.
-  const [todayDate, setTodayDate] = useState<string | null>(null);
+  // (onAddToday) і для заголовка сторінки. Стартове значення — дата браузера, щоб
+  // заголовок не блимав порожнім; уточнюється поясом користувача одразу після монтування.
+  const [todayDate, setTodayDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Scheduled | null>(null);
@@ -358,13 +359,14 @@ export default function Planner() {
       isToday={viewingToday}
       colorOverrides={colorOverrides}
       onMoveToFreeSlotToday={onMoveToFreeSlotToday}
+      showDate={false}
     />
   );
 
   return (
     <main className="stack" style={{ maxWidth: 600, paddingBottom: 96 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Family Day Planner</h1>
+        <h1>{formatHeaderDate(planDate ?? todayDate)}</h1>
         <div className="row">
           <button
             onClick={() => setSettingsOpen((v) => !v)}
@@ -473,14 +475,14 @@ export default function Planner() {
           </details>
 
           <details className="card">
-            <summary className="settings-row row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
-              <span className="row" style={{ minWidth: 0, flex: 1, flexWrap: "nowrap", alignItems: "flex-start" }}>
+            <summary className="settings-row row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "center" }}>
+              <span className="row" style={{ flex: 1, minWidth: 0, flexWrap: "nowrap" }}>
                 <span className="icon-chip" style={{ flexShrink: 0 }}>
                   <ShareNetwork size={16} />
                 </span>
-                <span>Поділитись планом з партнером</span>
+                <span style={{ minWidth: 0 }}>Поділитись планом з партнером</span>
               </span>
-              <CaretRight size={14} className="chevron" style={{ flexShrink: 0, marginTop: 2 }} />
+              <CaretRight size={14} className="chevron" style={{ flexShrink: 0 }} />
             </summary>
             <div className="stack" style={{ marginTop: 12 }}>
               <p className="muted">Партнер бачить сьогоднішній план (тільки перегляд).</p>
