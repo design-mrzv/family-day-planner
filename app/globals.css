@@ -324,6 +324,7 @@ details[open] > .settings-row .chevron {
   max-width: 600px;
   max-height: 85dvh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (min-width: 640px) {

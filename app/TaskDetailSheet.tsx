@@ -145,11 +145,11 @@ export default function TaskDetailSheet({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
           <div className="field" style={{ maxWidth: "none", minWidth: 0 }}>
             <span className="field-label">Початок</span>
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: "100%" }} />
+            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: "100%", minWidth: 0 }} />
           </div>
           <div className="field" style={{ maxWidth: "none", minWidth: 0 }}>
             <span className="field-label">Кінець</span>
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ width: "100%" }} />
+            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} style={{ width: "100%", minWidth: 0 }} />
           </div>
         </div>
         {durationMin < 5 && <p className="error-text">Час завершення має бути пізніше початку.</p>}
