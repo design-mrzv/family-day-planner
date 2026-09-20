@@ -484,6 +484,14 @@ upsert (inline у роуті — на відміну від `duration-override`,
 `SolverResult` (200). Не знайдено → `409`
 `{ "error": "no_free_slot", "message": "..." }`.
 
+Раунд 5: шукає спершу в `schedule` (репозиція — "Перенести → сьогодні" з
+`TaskDetailSheet`), якщо там нема — у `overflow` за `normalizeTaskKey`
+("Вставити у вільний час" на рядку overflow-задачі, `app/ScheduleView.tsx`).
+Знайдено в overflow → `splice` з `overflow`, `push` у `schedule` як
+`{ title, start, duration_min, type: "flexible" }` (розміщено автоматично,
+не мало явного часу від людини). Той самий контракт відповіді для обох
+джерел — один роут, не два майже ідентичних.
+
 **`GET /api/routine`** — форма відповіді змінена: `{ "items": string[] }`
 замість `{ "prefill": string }` (Етап 2 — розділ 9). Той самий список
 (carry з останнього дня + рутина ≥2 днів, дедуп), але масив, не об'єднаний

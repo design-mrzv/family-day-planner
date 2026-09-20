@@ -1,4 +1,6 @@
-import { Fragment } from "react";
+"use client";
+
+import { Fragment, useState } from "react";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
 import { resolveColorIndex } from "@/lib/color";
 import DurationEditor from "./DurationEditor";
@@ -147,6 +149,7 @@ export default function ScheduleView({
   onToggleDone,
   onOpenDetail,
   colorOverrides = new Map(),
+  onMoveToFreeSlotToday,
 }: {
   result: SolverResult;
   readOnly?: boolean;
@@ -155,7 +158,20 @@ export default function ScheduleView({
   onToggleDone?: (title: string, done: boolean) => void;
   onOpenDetail?: (s: Scheduled) => void;
   colorOverrides?: Map<string, number>;
+  onMoveToFreeSlotToday?: (title: string) => Promise<{ ok: boolean; message?: string }>;
 }) {
+  const [fittingTitle, setFittingTitle] = useState<string | null>(null);
+  const [fitError, setFitError] = useState<{ title: string; message: string } | null>(null);
+
+  async function onFitOverflow(title: string) {
+    if (!onMoveToFreeSlotToday) return;
+    setFittingTitle(title);
+    setFitError(null);
+    const res = await onMoveToFreeSlotToday(title);
+    setFittingTitle(null);
+    if (!res.ok) setFitError({ title, message: res.message ?? "Не вдалося вставити." });
+  }
+
   if (isEmptyResult(result)) {
     return (
       <p className="muted" style={{ marginTop: 16 }}>
@@ -190,13 +206,23 @@ export default function ScheduleView({
           <ul className="list-plain card">
             {result.overflow.map((o) => (
               <li key={`${o.title}-${o.reason}`}>
-                <span>{o.title}</span>
-                <span className="row">
-                  {!readOnly && (
-                    <DurationEditor key={o.duration_min} title={o.title} durationMin={o.duration_min} onSaved={onDurationSaved ?? (() => {})} />
-                  )}
-                  <span className="muted">{o.reason === "conflict" ? "конфлікт часу" : "немає місця"}</span>
-                </span>
+                <div className="stack" style={{ gap: 4, width: "100%" }}>
+                  <div className="row" style={{ justifyContent: "space-between" }}>
+                    <span>{o.title}</span>
+                    <span className="row">
+                      {!readOnly && (
+                        <DurationEditor key={o.duration_min} title={o.title} durationMin={o.duration_min} onSaved={onDurationSaved ?? (() => {})} />
+                      )}
+                      {!readOnly && onMoveToFreeSlotToday && (
+                        <button type="button" className="btn-text" onClick={() => onFitOverflow(o.title)} disabled={fittingTitle === o.title}>
+                          {fittingTitle === o.title ? "Шукаю…" : "Вставити у вільний час"}
+                        </button>
+                      )}
+                      <span className="muted">{o.reason === "conflict" ? "конфлікт часу" : "немає місця"}</span>
+                    </span>
+                  </div>
+                  {fitError?.title === o.title && <p className="error-text">{fitError.message}</p>}
+                </div>
               </li>
             ))}
           </ul>

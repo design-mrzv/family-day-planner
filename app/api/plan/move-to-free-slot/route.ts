@@ -8,6 +8,12 @@ import { normalizeTaskKey, toMin } from "@/lib/solver/config";
 import { findFreeSlot, type Interval } from "@/lib/solver/solve";
 import type { SolverResult, Scheduled } from "@/lib/solver/types";
 
+function occupiedFrom(tasks: SolverResult, exclude?: Scheduled): Interval[] {
+  return tasks.schedule
+    .filter((s) => s !== exclude && s.status !== "moved")
+    .map((s) => ({ start: toMin(s.start), end: toMin(s.start) + s.duration_min, buffer: 0 }));
+}
+
 export const runtime = "nodejs";
 
 const BodySchema = z.strictObject({
@@ -15,13 +21,12 @@ const BodySchema = z.strictObject({
   title: z.string().trim().min(1),
 });
 
-function end(s: Scheduled): number {
-  return toMin(s.start) + s.duration_min;
-}
-
 // "Перенести → сьогодні (вільний час)" з екрана деталей (Етап 5, раунд 4) — той самий
 // findFreeSlot, що вже застосовує /api/plan/reschedule для зсуву конфліктних задач, лише
 // викликаний напряму для самої обраної задачі. Дзеркалить app/api/plan/move/route.ts.
+// Раунд 5: шукає спершу в schedule (репозиція), інакше в overflow ("Вставити у вільний
+// час" з ScheduleView) — та сама дія "знайти вільний слот і поставити туди", лише різне
+// джерело задачі, тому один роут замість двох майже ідентичних.
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
@@ -52,23 +57,33 @@ export async function POST(request: Request) {
   const tasks = row.tasks as SolverResult;
   const key = normalizeTaskKey(parsed.data.title);
   const target = tasks.schedule.find((s) => normalizeTaskKey(s.title) === key && s.status !== "moved");
-  if (!target) {
-    return Response.json({ error: "not_found", message: "Задачу не знайдено в розкладі." }, { status: 404 });
+
+  if (target) {
+    const freeStart = findFreeSlot(target.duration_min, occupiedFrom(tasks, target));
+    if (freeStart == null) {
+      return Response.json(
+        { error: "no_free_slot", message: "Сьогодні немає вільного часу такої тривалості." },
+        { status: 409 },
+      );
+    }
+    target.start = freeStart;
+  } else {
+    const overflowIdx = tasks.overflow.findIndex((o) => normalizeTaskKey(o.title) === key);
+    if (overflowIdx === -1) {
+      return Response.json({ error: "not_found", message: "Задачу не знайдено в розкладі." }, { status: 404 });
+    }
+    const item = tasks.overflow[overflowIdx];
+    const freeStart = findFreeSlot(item.duration_min, occupiedFrom(tasks));
+    if (freeStart == null) {
+      return Response.json(
+        { error: "no_free_slot", message: "Сьогодні немає вільного часу такої тривалості." },
+        { status: 409 },
+      );
+    }
+    tasks.overflow.splice(overflowIdx, 1);
+    tasks.schedule.push({ title: item.title, start: freeStart, duration_min: item.duration_min, type: "flexible" });
   }
 
-  const occupied: Interval[] = tasks.schedule
-    .filter((s) => s !== target && s.status !== "moved")
-    .map((s) => ({ start: toMin(s.start), end: end(s), buffer: 0 }));
-
-  const freeStart = findFreeSlot(target.duration_min, occupied);
-  if (freeStart == null) {
-    return Response.json(
-      { error: "no_free_slot", message: "Сьогодні немає вільного часу такої тривалості." },
-      { status: 409 },
-    );
-  }
-
-  target.start = freeStart;
   tasks.schedule.sort((a, b) => toMin(a.start) - toMin(b.start));
 
   await db

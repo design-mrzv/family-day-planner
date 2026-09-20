@@ -323,6 +323,7 @@ export default function Planner() {
       onOpenDetail={setDetailTask}
       isToday={viewingToday}
       colorOverrides={colorOverrides}
+      onMoveToFreeSlotToday={onMoveToFreeSlotToday}
     />
   );
 
@@ -334,6 +335,7 @@ export default function Planner() {
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             aria-label={settingsOpen ? "Закрити налаштування" : "Налаштування"}
+            title={settingsOpen ? "Закрити налаштування" : "Налаштування"}
             aria-expanded={settingsOpen}
             aria-pressed={settingsOpen}
             className={`icon-btn${settingsOpen ? " btn-primary" : ""}`}
@@ -437,16 +439,14 @@ export default function Planner() {
           </details>
 
           <details className="card">
-            <summary className="settings-row row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
-              <span className="row" style={{ minWidth: 0, flex: 1, flexWrap: "nowrap" }}>
-                <span className="icon-chip">
+            <summary className="settings-row row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
+              <span className="row" style={{ minWidth: 0, flex: 1, flexWrap: "nowrap", alignItems: "flex-start" }}>
+                <span className="icon-chip" style={{ flexShrink: 0 }}>
                   <ShareNetwork size={16} />
                 </span>
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
-                  Поділитись планом з партнером
-                </span>
+                <span>Поділитись планом з партнером</span>
               </span>
-              <CaretRight size={14} className="chevron" style={{ flexShrink: 0 }} />
+              <CaretRight size={14} className="chevron" style={{ flexShrink: 0, marginTop: 2 }} />
             </summary>
             <div className="stack" style={{ marginTop: 12 }}>
               <p className="muted">Партнер бачить сьогоднішній план (тільки перегляд).</p>
@@ -485,7 +485,7 @@ export default function Planner() {
           {result === null && <p className="muted">Ще немає розкладу на сьогодні. Натисни +, щоб написати задачі.</p>}
           {scheduleView}
 
-          <button onClick={() => setInputOpen(true)} aria-label="Написати задачі" className="fab btn-primary">
+          <button onClick={() => setInputOpen(true)} aria-label="Написати задачі" title="Написати задачі" className="fab btn-primary">
             <Plus size={24} />
           </button>
 
