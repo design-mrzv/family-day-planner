@@ -142,14 +142,14 @@ export default function TaskDetailSheet({
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
         </div>
 
-        <div className="row" style={{ justifyContent: "space-between", gap: 32 }}>
+        <div className="row" style={{ gap: 32 }}>
           <div className="field" style={{ maxWidth: "none", width: 130 }}>
             <span className="field-label">Початок</span>
             <input
               type="time"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              style={{ display: "block", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}
+              style={{ display: "block", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", textAlign: "center" }}
             />
           </div>
           <div className="field" style={{ maxWidth: "none", width: 130 }}>
@@ -158,7 +158,7 @@ export default function TaskDetailSheet({
               type="time"
               value={end}
               onChange={(e) => setEnd(e.target.value)}
-              style={{ display: "block", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}
+              style={{ display: "block", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", textAlign: "center" }}
             />
           </div>
         </div>
