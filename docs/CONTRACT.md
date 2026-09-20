@@ -497,4 +497,31 @@ upsert (inline у роуті — на відміну від `duration-override`,
 (carry з останнього дня + рутина ≥2 днів, дедуп), але масив, не об'єднаний
 рядок — фронтенд рендерить кожен елемент чіпом-чекбоксом
 (`app/TaskInputSheet.tsx`), а не підставляє в текст для ручного редагування.
+
+## 21. Додати задачу на сьогодні (Етап 5, раунд 6)
+
+FAB-модалка отримала перемикач "Сьогодні"/"Завтра" (`app/TaskInputSheet.tsx`,
+дефолт "Завтра" — вечірній сценарій не зачеплений). "Завтра" — без змін,
+`POST /api/plan` (повний перезапис дня). "Сьогодні" — **інкрементне
+додавання** в уже існуючий розклад, не перезапис: `POST /api/plan/add-today`,
+вхід `{ "text": string, "resolve_conflict"?: boolean }`.
+
+Дата — тільки серверна (`dateStringInTz(timezone, 0)`, як
+`api/plan/today`), клієнт її не передає. Дві гілки:
+- **Нема рядка `daily_plans` на сьогодні** → `planAndSaveDay` (той самий
+  виклик, що звичайний перший план дня) → 200, повний `SolverResult`.
+- **Є рядок** → `parseTasks(text, today)` (LLM парсить лише новий текст) →
+  `placeNewTasks` (`lib/solver/addTasks.ts`) домержовує в existing
+  `SolverResult`, мутуючи на місці. Конфлікт нової фіксованої задачі з
+  існуючою і `!resolve_conflict` → `409 { "error": "time_conflict", "conflicts": [{newTitle, withTitle, withStart, withDurationMin}] }`,
+  нічого не збережено. `resolve_conflict: true` → існуючі конфліктні
+  задачі зсуваються через `findFreeSlot` (розділ 19), нова стає на
+  заявлений час. 200 → повний `SolverResult`.
+
+`placeNewTasks` перевикористовує лише вже експортовані примітиви
+`lib/solver/solve.ts` (`overlaps`, `findFreeSlot`, `placeFlexible`) —
+жодної нової логіки розкладання, тільки оркестрація. Гнучкі нові задачі
+без вільного місця → `overflow` (`reason: "no_slot"`), той самий шлях, що
+"Вставити у вільний час" (розділ 20). `done`/`moved`-статуси існуючих
+задач не чіпаються.
 `computePrefill` (`lib/routine.ts`) відповідно повертає `string[]`.

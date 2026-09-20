@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "@phosphor-icons/react/dist/ssr";
+
+type AddConflict = { newTitle: string; withTitle: string; withStart: string };
+type AddTodayResult = { ok: boolean; message?: string; conflicts?: AddConflict[] };
 
 // Модалка вводу — той самий textarea+"Розкласти", що раніше жив прямо на сторінці,
 // винесений за FAB (Planner.tsx), щоб головний екран лишався розкладом, не формою.
 // Звичні задачі (routineItems) — чіпи-чекбокси, не підставлений у текст рядок (Етап 5,
 // раунд 4): тап перемикає, textarea лишається чистою для нового/унікального.
+// Раунд 6: перемикач "сьогодні/завтра" — сьогодні домержує вже існуючий розклад дня
+// (onAddToday), не переписує його; конфлікт фіксованого часу показує inline-банер,
+// той самий патерн, що вже є в TaskDetailSheet.
 export default function TaskInputSheet({
   open,
   onClose,
   text,
   setText,
   onPlan,
+  onAddToday,
   loading,
   error,
   routineItems,
@@ -25,6 +32,7 @@ export default function TaskInputSheet({
   text: string;
   setText: (v: string) => void;
   onPlan: () => Promise<boolean>;
+  onAddToday: (text: string, resolveConflict?: boolean) => Promise<AddTodayResult>;
   loading: boolean;
   error: string | null;
   routineItems: string[];
@@ -32,6 +40,11 @@ export default function TaskInputSheet({
   onToggleItem: (title: string) => void;
   hasResult: boolean;
 }) {
+  const [target, setTarget] = useState<"today" | "tomorrow">("tomorrow");
+  const [addingToday, setAddingToday] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<AddConflict | null>(null);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -48,25 +61,61 @@ export default function TaskInputSheet({
 
   if (!open) return null;
 
+  function resetAndClose() {
+    setTarget("tomorrow");
+    setAddError(null);
+    setConflict(null);
+    setText("");
+    onClose();
+  }
+
   const hasChosen = routineItems.some((t) => selected.has(t));
-  const canSubmit = hasChosen || text.trim() !== "";
+  const canSubmitTomorrow = hasChosen || text.trim() !== "";
+  const canSubmitToday = text.trim() !== "";
 
   async function handlePlan() {
     const ok = await onPlan();
-    if (ok) onClose();
+    if (ok) resetAndClose();
+  }
+
+  async function handleAddToday(resolveConflict?: boolean) {
+    setAddingToday(true);
+    setAddError(null);
+    const res = await onAddToday(text, resolveConflict);
+    setAddingToday(false);
+    if (res.ok) {
+      resetAndClose();
+      return;
+    }
+    if (res.conflicts && res.conflicts.length > 0) {
+      setConflict(res.conflicts[0]);
+      return;
+    }
+    setAddError(res.message ?? "Не вдалося додати.");
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={resetAndClose}>
       <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}>
-          <p style={{ flex: 1, minWidth: 0 }}>{hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}</p>
-          <button onClick={onClose} aria-label="Закрити" className="icon-btn" style={{ flexShrink: 0 }}>
+          <p style={{ flex: 1, minWidth: 0 }}>
+            {target === "today" ? "Додай задачу на сьогодні." : hasResult ? "На завтра" : "Напиши справи на завтра, як думаєш — одним текстом."}
+          </p>
+          <button onClick={resetAndClose} aria-label="Закрити" className="icon-btn" style={{ flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
 
-        {routineItems.length > 0 && (
+        <div className="row" style={{ flexWrap: "nowrap" }}>
+          <button type="button" className="chip" aria-pressed={target === "today"} onClick={() => setTarget("today")}>
+            Сьогодні
+          </button>
+          <button type="button" className="chip" aria-pressed={target === "tomorrow"} onClick={() => setTarget("tomorrow")}>
+            Завтра
+          </button>
+        </div>
+
+        {target === "tomorrow" && routineItems.length > 0 && (
           <div className="row" style={{ flexWrap: "wrap" }}>
             {routineItems.map((title) => (
               <button
@@ -85,16 +134,47 @@ export default function TaskInputSheet({
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          rows={routineItems.length > 0 ? 3 : 6}
-          autoFocus={routineItems.length === 0}
+          rows={target === "tomorrow" && routineItems.length > 0 ? 3 : 6}
+          autoFocus={target === "today" || routineItems.length === 0}
           style={{ width: "100%", display: "block" }}
-          placeholder={routineItems.length > 0 ? "щось нове, чого нема вище" : "тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"}
+          placeholder={
+            target === "today"
+              ? "зателефонувати лікарю, купити молоко о 18:00"
+              : routineItems.length > 0
+                ? "щось нове, чого нема вище"
+                : "тренування, забрати старшого о 15:00, зняти відео, вечеря, оплатити садок до пʼятниці"
+          }
         />
-        <button className="btn-primary" onClick={handlePlan} disabled={loading || !canSubmit}>
-          {loading ? "Розкладаю…" : "Розкласти план"}
-        </button>
 
-        {error && <p className="error-text">{error}</p>}
+        {target === "today" && conflict && (
+          <div className="card" style={{ borderColor: "var(--danger)" }}>
+            <p>
+              У цей час вже стоїть «{conflict.withTitle}» ({conflict.withStart}). Перенести її на вільний час?
+            </p>
+            <div className="row">
+              <button onClick={() => setConflict(null)} disabled={addingToday}>
+                Скасувати
+              </button>
+              <button className="btn-primary" onClick={() => handleAddToday(true)} disabled={addingToday}>
+                Перенести і додати
+              </button>
+            </div>
+          </div>
+        )}
+
+        {target === "today" ? (
+          !conflict && (
+            <button className="btn-primary" onClick={() => handleAddToday(false)} disabled={addingToday || !canSubmitToday}>
+              {addingToday ? "Додаю…" : "Додати"}
+            </button>
+          )
+        ) : (
+          <button className="btn-primary" onClick={handlePlan} disabled={loading || !canSubmitTomorrow}>
+            {loading ? "Розкладаю…" : "Розкласти план"}
+          </button>
+        )}
+
+        {target === "today" ? addError && <p className="error-text">{addError}</p> : error && <p className="error-text">{error}</p>}
       </div>
     </div>
   );

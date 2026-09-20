@@ -37,6 +37,9 @@ export default function Planner() {
   // Дата, на яку реально плануємо — заповнюється автоматично з /api/plan/today.tomorrow
   // (пояс користувача), без ручного поля в UI (гейти пройдено, дебаг-поле більше не потрібне).
   const [targetDate, setTargetDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
+  // Сьогодні за поясом користувача (з /api/plan/today.date) — для FAB "Сьогодні"
+  // (onAddToday), щоб не покладатись на дату браузера.
+  const [todayDate, setTodayDate] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Scheduled | null>(null);
@@ -206,6 +209,7 @@ export default function Planner() {
       .then((data) => {
         if (!data) return;
         if (data.tomorrow) setTargetDate(data.tomorrow as string);
+        if (data.date) setTodayDate(data.date as string);
         if (data.result) {
           setResult(data.result as SolverResult);
           setPlanDate(data.date as string);
@@ -267,6 +271,32 @@ export default function Planner() {
       return false;
     } finally {
       setLoading(false);
+    }
+  }
+
+  // FAB "Сьогодні" — додає нову(і) задачу(і) в УЖЕ ІСНУЮЧИЙ розклад дня, не переписує
+  // його (на відміну від onPlan/api/plan). resolveConflict:true — другий виклик після
+  // підтвердження банера конфлікту (api/plan/add-today).
+  async function onAddToday(text: string, resolveConflict?: boolean): Promise<{ ok: boolean; message?: string; conflicts?: { newTitle: string; withTitle: string; withStart: string }[] }> {
+    try {
+      const res = await fetch("/api/plan/add-today", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text, resolve_conflict: resolveConflict || undefined }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        return { ok: false, conflicts: data.conflicts };
+      }
+      if (!res.ok) {
+        return { ok: false, message: data?.message ?? "Помилка." };
+      }
+      setResult(data as SolverResult);
+      if (todayDate) setPlanDate(todayDate);
+      setViewingToday(true);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: "Мережа недоступна. Спробуй ще раз." };
     }
   }
 
@@ -495,6 +525,7 @@ export default function Planner() {
             text={text}
             setText={setText}
             onPlan={onPlan}
+            onAddToday={onAddToday}
             loading={loading}
             error={error}
             routineItems={routineItems}
