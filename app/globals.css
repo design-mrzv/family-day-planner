@@ -327,6 +327,12 @@ details[open] > .settings-row .chevron {
   overflow-x: hidden;
 }
 
+/* Safari ігнорує звичайний text-align на input[type="time"] — саме значення
+   рендериться через внутрішній WebKit-псевдоелемент, який треба стилізувати окремо. */
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .modal-backdrop {
     align-items: center;
