@@ -176,12 +176,12 @@ export default function TaskInputSheet({
 
         {target === "today" ? (
           !conflict && (
-            <button className="btn-primary" onClick={() => handleAddToday(false)} disabled={addingToday || !canSubmitToday}>
+            <button className="btn-primary btn-lg" onClick={() => handleAddToday(false)} disabled={addingToday || !canSubmitToday}>
               {addingToday ? "Додаю…" : "Додати"}
             </button>
           )
         ) : (
-          <button className="btn-primary" onClick={handlePlan} disabled={loading || !canSubmitTomorrow}>
+          <button className="btn-primary btn-lg" onClick={handlePlan} disabled={loading || !canSubmitTomorrow}>
             {loading ? "Розкладаю…" : "Розкласти план"}
           </button>
         )}

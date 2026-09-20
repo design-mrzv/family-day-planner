@@ -142,7 +142,7 @@ export default function TaskDetailSheet({
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
         </div>
 
-        <div className="row" style={{ flexWrap: "nowrap", gap: 20 }}>
+        <div className="row" style={{ flexWrap: "nowrap", gap: 32 }}>
           <div className="field" style={{ flex: 1, maxWidth: "none", minWidth: 0 }}>
             <span className="field-label">Початок</span>
             <input type="time" value={start} onChange={(e) => setStart(e.target.value)} style={{ width: "100%" }} />
@@ -232,7 +232,7 @@ export default function TaskDetailSheet({
             )}
             {moveError && <p className="error-text">{moveError}</p>}
 
-            <button className="btn-primary" onClick={() => submit(false)} disabled={saving || invalid}>
+            <button className="btn-primary btn-lg" onClick={() => submit(false)} disabled={saving || invalid}>
               {saving ? "Зберігаю…" : "Зберегти"}
             </button>
           </>

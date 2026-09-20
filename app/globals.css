@@ -137,6 +137,16 @@ button:disabled {
   filter: brightness(1.08);
 }
 
+/* Більший варіант основної дії — фінальні кнопки-підтвердження модалок (Зберегти,
+   Розкласти план, Додати), яких за екран тапають лише раз — трохи ширший тач-таргет,
+   легше влучити пальцем, ніж стандартний .btn-primary. */
+.btn-lg {
+  padding: 14px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-height: 52px;
+}
+
 /* Другорядна дія без рамки/фону — легша за вагою, ніж .btn-primary чи звичайна button
    (напр. "Перенести…" в TaskDetailSheet: не має конкурувати з "Зберегти" за увагу). */
 .btn-text {
@@ -322,6 +332,11 @@ details[open] > .settings-row .chevron {
   }
   .modal-panel {
     border-radius: var(--radius);
+  }
+  /* Нативна іконка годинника в input[type="time"] на мобільному — частина того, як
+     виглядає рідний picker; на десктопі — зайвий візуальний шум, прибираємо. */
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
   }
 }
 
