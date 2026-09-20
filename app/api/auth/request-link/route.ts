@@ -28,5 +28,11 @@ export async function POST(request: Request) {
   const verifyUrl = new URL("/api/auth/verify", request.url);
   verifyUrl.searchParams.set("token", token);
 
-  return Response.json({ ok: true, devLink: verifyUrl.toString() });
+  // Email-сервіс ще не підключено, тож продакшн не має що показати замість листа —
+  // краще тимчасово зламаний логін, ніж посилання-бекдор у відповіді API.
+  if (process.env.NODE_ENV !== "production") {
+    return Response.json({ ok: true, devLink: verifyUrl.toString() });
+  }
+
+  return Response.json({ ok: true });
 }
