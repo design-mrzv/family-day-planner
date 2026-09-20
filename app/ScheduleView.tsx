@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { isEmptyResult, type SolverResult, type Scheduled } from "@/lib/solver/types";
 import { resolveColorIndex } from "@/lib/color";
 import DurationEditor from "./DurationEditor";
@@ -65,7 +65,15 @@ function Timeline({
   isToday: boolean;
   colorOverrides: Map<string, number>;
 }) {
-  const now = new Date();
+  // "Зараз" рахується лише при рендері — без таймера лінія "застигає" на моменті
+  // останнього рендеру (напр. після додавання задачі), а не йде за реальним часом,
+  // поки екран просто відкритий. Хвилинна точність — оновлення раз на хвилину досить.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!isToday) return;
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, [isToday]);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const rows = buildRows(items, isToday, nowMinutes);
   const clickable = !readOnly && onOpenDetail;
