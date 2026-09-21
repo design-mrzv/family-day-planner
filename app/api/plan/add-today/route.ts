@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       .set({ tasks, updatedAt: new Date() })
       .where(and(eq(dailyPlans.userId, session.userId), eq(dailyPlans.date, today)));
 
-    return Response.json(tasks);
+    return Response.json({ ...tasks, displaced: outcome.displaced });
   } catch (e) {
     if (e instanceof ServiceError) {
       return Response.json(

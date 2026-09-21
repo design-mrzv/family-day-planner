@@ -24,7 +24,7 @@ describe("placeNewTasks", () => {
   it("гнучка задача без конфліктів → додається в schedule", () => {
     const existing = empty();
     const res = placeNewTasks([task("йога")], existing, new Map(), false);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     expect(existing.schedule).toHaveLength(1);
     expect(existing.schedule[0].title).toBe("йога");
   });
@@ -44,11 +44,29 @@ describe("placeNewTasks", () => {
   it("resolve_conflict:true → існуючу зсуває на вільний слот, нова стає на заявлений час", () => {
     const existing: SolverResult = { schedule: [scheduled("робота", "09:00", 60, "fixed")], overflow: [], deadlines: [] };
     const res = placeNewTasks([task("зустріч", "09:15")], existing, new Map(), true);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     const titles = existing.schedule.map((s) => s.title).sort();
     expect(titles).toEqual(["зустріч", "робота"]);
     const zustrich = existing.schedule.find((s) => s.title === "зустріч")!;
     expect(zustrich.start).toBe("09:15");
+  });
+
+  it("resolve_conflict:true і вільного часу нема → існуюча падає в overflow, з'являється в displaced", () => {
+    // Весь пошуковий діапазон (07:00-21:00) зайнятий двома блокерами навколо "робота" —
+    // коли нова "зустріч" займає точно її місце, зсунутій "робота" вже ніде подітися.
+    const existing: SolverResult = {
+      schedule: [
+        scheduled("зранку", "07:00", 120, "fixed"), // 07:00–09:00
+        scheduled("робота", "09:00", 60, "fixed"), // 09:00–10:00
+        scheduled("до вечора", "10:00", 11 * 60, "fixed"), // 10:00–21:00
+      ],
+      overflow: [],
+      deadlines: [],
+    };
+    const res = placeNewTasks([task("зустріч", "09:00")], existing, new Map(), true);
+    expect(res).toEqual({ ok: true, displaced: ["робота"] });
+    expect(existing.schedule.map((s) => s.title).sort()).toEqual(["до вечора", "зранку", "зустріч"]);
+    expect(existing.overflow).toEqual([{ title: "робота", duration_min: 60, reason: "no_slot" }]);
   });
 
   it("гнучка без вільного місця → overflow, не кидає помилку", () => {
@@ -59,7 +77,7 @@ describe("placeNewTasks", () => {
       deadlines: [],
     };
     const res = placeNewTasks([task("йога")], existing, new Map(), false);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     expect(existing.schedule).toHaveLength(1);
     expect(existing.overflow).toEqual([{ title: "йога", duration_min: 60, reason: "no_slot" }]);
   });
@@ -67,7 +85,7 @@ describe("placeNewTasks", () => {
   it("дедлайн без fixed_time → у deadlines, не в schedule", () => {
     const existing = empty();
     const res = placeNewTasks([task("оплатити садок", null, "2026-09-25")], existing, new Map(), false);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     expect(existing.deadlines).toEqual([{ title: "оплатити садок", date: "2026-09-25" }]);
     expect(existing.schedule).toHaveLength(0);
   });
@@ -85,7 +103,7 @@ describe("placeNewTasks", () => {
     const existing = empty();
     const elevenAm = 11 * 60;
     const res = placeNewTasks([task("зателефонувати лікарю")], existing, new Map(), false, elevenAm);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     expect(toMin(existing.schedule[0].start)).toBeGreaterThanOrEqual(elevenAm);
   });
 
@@ -93,7 +111,7 @@ describe("placeNewTasks", () => {
     const existing: SolverResult = { schedule: [scheduled("робота", "12:00", 60, "fixed")], overflow: [], deadlines: [] };
     const elevenAm = 11 * 60;
     const res = placeNewTasks([task("зустріч", "12:15")], existing, new Map(), true, elevenAm);
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, displaced: [] });
     const robota = existing.schedule.find((s) => s.title === "робота")!;
     expect(toMin(robota.start)).toBeGreaterThanOrEqual(elevenAm);
   });

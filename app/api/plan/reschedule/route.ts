@@ -88,6 +88,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // Конфліктна задача, якій не знайшлось вільного часу, падає в overflow — з погляду
+  // solver-а це не помилка, але з погляду людини кнопка "перенести" не мала б виглядати
+  // успішною, якщо результат — задача взагалі випала з розкладу дня. displaced іде у
+  // відповідь, щоб фронтенд міг показати про це попап.
+  const displaced: string[] = [];
   if (conflicts.length > 0) {
     for (const conflict of conflicts) {
       const occupied: Interval[] = tasks.schedule
@@ -101,6 +106,7 @@ export async function POST(request: Request) {
       } else {
         tasks.schedule = tasks.schedule.filter((s) => s !== conflict);
         tasks.overflow.push({ title: conflict.title, duration_min: conflict.duration_min, reason: "no_slot" });
+        displaced.push(conflict.title);
       }
     }
   }
@@ -122,5 +128,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return Response.json(tasks);
+  return Response.json({ ...tasks, displaced });
 }

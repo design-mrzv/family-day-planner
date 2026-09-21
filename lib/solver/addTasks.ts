@@ -30,7 +30,7 @@ export function placeNewTasks(
   durationOverrides: DurationOverrides,
   resolveConflicts: boolean,
   minStartMinutes = 0,
-): { ok: true } | { ok: false; conflicts: AddConflict[] } {
+): { ok: true; displaced: string[] } | { ok: false; conflicts: AddConflict[] } {
   const dayTasks: Task[] = [];
   for (const t of newTasks) {
     if (t.deadline && !t.fixed_time) existing.deadlines.push({ title: t.title, date: t.deadline });
@@ -43,6 +43,11 @@ export function placeNewTasks(
   // Фіксовані спершу — по черзі проти occupied, що зростає з кожною щойно розміщеною
   // (нові фіксовані задачі ловлять конфлікт і між собою, не тільки з існуючими).
   const conflicts: AddConflict[] = [];
+  // Задачі, яких довелось зсунути через конфлікт, але для яких не знайшлось вільного
+  // часу — впали в overflow "мовчки" з погляду solver-а. Фронтенд показує про це попап
+  // (submit-підтвердження "перенести" не мало б виглядати успішним, якщо результат —
+  // задача взагалі випала з розкладу дня).
+  const displaced: string[] = [];
   for (const t of fixed) {
     const d = resolveDuration(t.title, durationOverrides);
     const start = toMin(t.fixed_time as string);
@@ -61,6 +66,7 @@ export function placeNewTasks(
         else {
           existing.schedule = existing.schedule.filter((s) => s !== c);
           existing.overflow.push({ title: c.title, duration_min: c.duration_min, reason: "no_slot" });
+          displaced.push(c.title);
         }
       }
     }
@@ -85,5 +91,5 @@ export function placeNewTasks(
   }
 
   existing.schedule.sort((a, b) => toMin(a.start) - toMin(b.start));
-  return { ok: true };
+  return { ok: true, displaced };
 }

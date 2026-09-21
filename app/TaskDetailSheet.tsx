@@ -33,7 +33,7 @@ export default function TaskDetailSheet({
   date: string;
   colorOverrides: Map<string, number>;
   onClose: () => void;
-  onSaved: (result: SolverResult) => void;
+  onSaved: (result: SolverResult, displaced?: string[]) => void;
   onMoveToTomorrow: (title: string) => void;
   onMoveToFreeSlotToday: (title: string) => Promise<{ ok: boolean; message?: string }>;
   onColorSaved: (title: string, colorIndex: number) => void;
@@ -130,7 +130,8 @@ export default function TaskDetailSheet({
         setError(data?.message ?? "Не вдалося зберегти.");
         return;
       }
-      onSaved((await res.json()) as SolverResult);
+      const data = await res.json();
+      onSaved(data as SolverResult, data.displaced as string[] | undefined);
     } catch {
       setError("Мережа недоступна. Спробуй ще раз.");
     } finally {

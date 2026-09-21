@@ -44,6 +44,10 @@ export default function Planner() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputOpen, setInputOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Scheduled | null>(null);
+  // Попап "не вистачило місця" — коли конфлікт вирішується переносом, а для зсунутої
+  // задачі так і не знайшлося вільного часу, вона мовчки падає в overflow. Без цього
+  // попапу підтвердження "перенести" виглядало б успішним, хоча задача випала з дня.
+  const [displacedNotice, setDisplacedNotice] = useState<string[] | null>(null);
   // "Зараз"-лінія на timeline має сенс лише коли дивимось СЬОГОДНІШНІй план (fetch
   // /api/plan/today), не щойно розкладене "завтра" (onPlan() завжди планує на targetDate).
   const [viewingToday, setViewingToday] = useState(false);
@@ -299,6 +303,7 @@ export default function Planner() {
       setResult(data as SolverResult);
       if (todayDate) setPlanDate(todayDate);
       setViewingToday(true);
+      if (data.displaced?.length) setDisplacedNotice(data.displaced as string[]);
       return { ok: true };
     } catch {
       return { ok: false, message: "Мережа недоступна. Спробуй ще раз." };
@@ -547,9 +552,10 @@ export default function Planner() {
               date={planDate}
               colorOverrides={colorOverrides}
               onClose={() => setDetailTask(null)}
-              onSaved={(r) => {
+              onSaved={(r, displaced) => {
                 setResult(r);
                 setDetailTask(null);
+                if (displaced?.length) setDisplacedNotice(displaced);
               }}
               onMoveToTomorrow={async (title) => {
                 await onMoveToTomorrow(title);
@@ -558,6 +564,22 @@ export default function Planner() {
               onMoveToFreeSlotToday={onMoveToFreeSlotToday}
               onColorSaved={onColorSaved}
             />
+          )}
+
+          {displacedNotice && (
+            <div className="modal-backdrop" onClick={() => setDisplacedNotice(null)}>
+              <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
+                <p style={{ fontWeight: 600, fontSize: "1.05rem" }}>Не вистачило вільного часу</p>
+                <p>
+                  {displacedNotice.length === 1
+                    ? `«${displacedNotice[0]}» довелось перенести в «Не влізло сьогодні» — вільного часу поруч не знайшлося.`
+                    : `Кілька задач довелось перенести в «Не влізло сьогодні» — вільного часу поруч не знайшлося: ${displacedNotice.join(", ")}.`}
+                </p>
+                <button className="btn-primary" onClick={() => setDisplacedNotice(null)}>
+                  Зрозуміло
+                </button>
+              </div>
+            </div>
           )}
         </>
       )}
