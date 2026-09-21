@@ -57,6 +57,13 @@
       "when": 1789856124420,
       "tag": "0007_eager_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790021279502,
+      "tag": "0008_sharp_surge",
+      "breakpoints": true
     }
   ]
 }

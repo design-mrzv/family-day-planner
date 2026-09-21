@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { X, CaretRight, Trash } from "@phosphor-icons/react/dist/ssr";
 
 type AddConflict = { newTitle: string; withTitle: string; withStart: string };
 type AddTodayResult = { ok: boolean; message?: string; conflicts?: AddConflict[] };
@@ -26,6 +26,7 @@ export default function TaskInputSheet({
   selected,
   onToggleItem,
   onToggleAllRoutine,
+  onIgnoreRoutineItem,
 }: {
   open: boolean;
   onClose: () => void;
@@ -39,11 +40,16 @@ export default function TaskInputSheet({
   selected: Set<string>;
   onToggleItem: (title: string) => void;
   onToggleAllRoutine: (selectAll: boolean) => void;
+  onIgnoreRoutineItem: (title: string) => Promise<void>;
 }) {
   const [target, setTarget] = useState<"today" | "tomorrow">("tomorrow");
   const [addingToday, setAddingToday] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<AddConflict | null>(null);
+  // Підтвердження перед постійним видаленням із пропозицій "Рутинні задачі"
+  // (Етап 5, раунд 8) — локальний стан, не одразу викликає onIgnoreRoutineItem.
+  const [confirmIgnore, setConfirmIgnore] = useState<string | null>(null);
+  const [ignoring, setIgnoring] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -94,6 +100,14 @@ export default function TaskInputSheet({
     setAddError(res.message ?? "Не вдалося додати.");
   }
 
+  async function handleConfirmIgnore() {
+    if (!confirmIgnore) return;
+    setIgnoring(true);
+    await onIgnoreRoutineItem(confirmIgnore);
+    setIgnoring(false);
+    setConfirmIgnore(null);
+  }
+
   return (
     <div className="modal-backdrop" onClick={resetAndClose}>
       <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
@@ -134,10 +148,21 @@ export default function TaskInputSheet({
                 <span className="muted">Обрати всі</span>
               </label>
               {routineItems.map((title) => (
-                <label key={title} className="row" style={{ cursor: "pointer" }}>
-                  <input type="checkbox" checked={selected.has(title)} onChange={() => onToggleItem(title)} />
-                  {title}
-                </label>
+                <div key={title} className="row" style={{ justifyContent: "space-between" }}>
+                  <label className="row" style={{ cursor: "pointer", flex: 1, minWidth: 0 }}>
+                    <input type="checkbox" checked={selected.has(title)} onChange={() => onToggleItem(title)} />
+                    {title}
+                  </label>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Прибрати «${title}» з рутинних задач`}
+                    onClick={() => setConfirmIgnore(title)}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <Trash size={16} />
+                  </button>
+                </div>
               ))}
             </div>
           </details>
@@ -187,6 +212,26 @@ export default function TaskInputSheet({
         )}
 
         {target === "today" ? addError && <p className="error-text">{addError}</p> : error && <p className="error-text">{error}</p>}
+
+        {confirmIgnore && (
+          <div className="modal-backdrop" onClick={() => setConfirmIgnore(null)}>
+            <div className="modal-panel stack" onClick={(e) => e.stopPropagation()}>
+              <p style={{ fontWeight: 600, fontSize: "1.05rem" }}>Прибрати з рутинних?</p>
+              <p>
+                «{confirmIgnore}» більше не пропонуватиметься як рутинна задача. Можна ввести вручну — з&apos;явиться знову, якщо
+                повториться.
+              </p>
+              <div className="row">
+                <button onClick={() => setConfirmIgnore(null)} disabled={ignoring}>
+                  Скасувати
+                </button>
+                <button className="btn-primary" onClick={handleConfirmIgnore} disabled={ignoring}>
+                  {ignoring ? "Прибираю…" : "Прибрати"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -84,6 +84,23 @@ export const taskColors = pgTable(
   (t) => [unique().on(t.userId, t.taskKey)],
 );
 
+// Назви, які людина явно прибрала з пропозицій "Рутинні задачі" (Етап 5,
+// раунд 8) — постійний per-user ігнор-список, точна копія taskColors без
+// "значення": сама наявність рядка і є прапорцем. Не чіпає сам розклад/парсинг,
+// лише фільтрує lib/routine.ts на етапі підказки.
+export const ignoredRoutines = pgTable(
+  "ignored_routines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    taskKey: text("task_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.taskKey)],
+);
+
 // Етап 4: Web Push замість Telegram. endpoint — унікальний ідентифікатор підписки
 // браузера (по суті замінює telegram_chat_id); p256dh/auth — ключі шифрування payload,
 // які вимагає Push API. Один користувач може мати кілька підписок (кілька пристроїв).

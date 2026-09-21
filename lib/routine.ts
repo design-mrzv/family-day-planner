@@ -8,8 +8,10 @@ export interface PlanRow {
 
 // Рутина: назви справ, що зустрічались у ≥ threshold різних днів за наданий період.
 // Детерміновано, без LLM. Дедлайни навмисно не рахуємо — вони одноразові, не рутина.
+// ignored — ключі (normalizeTaskKey), які людина явно прибрала з пропозицій
+// (Етап 5, раунд 8) — ніколи не потрапляють навіть як кандидат.
 // Повертає рядок для підстановки в textarea (назви через кому, найчастіші першими).
-export function computeRoutine(plans: PlanRow[], threshold = 2): string {
+export function computeRoutine(plans: PlanRow[], threshold = 2, ignored: Set<string> = new Set()): string {
   const stat = new Map<string, { count: number; lastTitle: string; lastDate: string }>();
 
   for (const plan of plans) {
@@ -20,6 +22,7 @@ export function computeRoutine(plans: PlanRow[], threshold = 2): string {
     const seenToday = new Set<string>();
     for (const title of titles) {
       const key = normalizeTaskKey(title);
+      if (ignored.has(key)) continue;
       if (seenToday.has(key)) continue;
       seenToday.add(key);
 
@@ -44,13 +47,14 @@ export function computeRoutine(plans: PlanRow[], threshold = 2): string {
 }
 
 // Унікальні назви одного дня (schedule+overflow) у порядку появи, дедуп по ключу.
-function uniqueTitles(plan: PlanRow): string[] {
+function uniqueTitles(plan: PlanRow, ignored: Set<string> = new Set()): string[] {
   const t = plan.tasks as { schedule?: { title: string }[]; overflow?: { title: string }[] };
   const titles = [...(t?.schedule ?? []), ...(t?.overflow ?? [])].map((x) => x.title);
   const seen = new Set<string>();
   const out: string[] = [];
   for (const title of titles) {
     const key = normalizeTaskKey(title);
+    if (ignored.has(key)) continue;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(title);
@@ -62,11 +66,11 @@ function uniqueTitles(plan: PlanRow): string[] {
 // + рутинні справи, обʼєднані з дедуплікацією за назвою. plans — від найновішого.
 // Масив, не рядок (Етап 5, раунд 4) — фронтенд рендерить кожен елемент чіпом-чекбоксом,
 // не суцільним текстом для ручного редагування.
-export function computePrefill(plans: PlanRow[], threshold = 2): string[] {
+export function computePrefill(plans: PlanRow[], threshold = 2, ignored: Set<string> = new Set()): string[] {
   if (plans.length === 0) return [];
 
-  const carry = uniqueTitles(plans[0]); // найсвіжіший день першим
-  const routine = computeRoutine(plans, threshold);
+  const carry = uniqueTitles(plans[0], ignored); // найсвіжіший день першим
+  const routine = computeRoutine(plans, threshold, ignored);
   const routineTitles = routine ? routine.split(", ") : [];
 
   const seen = new Set(carry.map(normalizeTaskKey));

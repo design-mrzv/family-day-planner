@@ -55,6 +55,17 @@ describe("computeRoutine", () => {
     expect(computeRoutine(plans, 3)).toBe("йога");
     expect(computeRoutine(plans, 4)).toBe("");
   });
+
+  it("ignored: назва в ігнор-списку ніколи не потрапляє в рутину", () => {
+    const plans = [
+      day("2026-09-05", "вечеря", "тренування"),
+      day("2026-09-06", "вечеря", "тренування"),
+    ];
+    const ignored = new Set(["вечеря"]);
+    const r = computeRoutine(plans, 2, ignored);
+    expect(r).not.toContain("вечеря");
+    expect(r).toContain("тренування");
+  });
 });
 
 describe("computePrefill", () => {
@@ -81,5 +92,16 @@ describe("computePrefill", () => {
       },
     ];
     expect(computePrefill(plans)).toEqual(["погуляти"]);
+  });
+
+  it("ignored: прибирає і з carry, і з рутини", () => {
+    const plans = [
+      day("2026-09-07", "садок", "лікар"), // останній день (carry)
+      day("2026-09-06", "садок", "вечеря"),
+      day("2026-09-05", "садок", "вечеря"),
+    ];
+    // без ігнору: ["садок", "лікар", "вечеря"] (див. тест вище)
+    const ignored = new Set(["садок", "вечеря"]);
+    expect(computePrefill(plans, 2, ignored)).toEqual(["лікар"]);
   });
 });

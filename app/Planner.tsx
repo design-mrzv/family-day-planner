@@ -173,6 +173,24 @@ export default function Planner() {
     setSelectedRoutine(selectAll ? new Set(routineItems) : new Set());
   }
 
+  // Прибрати назву з пропозицій "Рутинні задачі" назавжди (Етап 5, раунд 8) —
+  // персистентно на бекенді (ignoredRoutines), оптимістично прибирає і з
+  // routineItems, і з selectedRoutine, щоб UI оновився одразу без перезапиту.
+  async function onIgnoreRoutineItem(title: string) {
+    const res = await fetch("/api/routine/ignore", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) return;
+    setRoutineItems((cur) => cur.filter((t) => t !== title));
+    setSelectedRoutine((cur) => {
+      const next = new Set(cur);
+      next.delete(title);
+      return next;
+    });
+  }
+
   function onColorSaved(title: string, colorIndex: number) {
     setColorOverrides((cur) => {
       const next = new Map(cur);
@@ -543,6 +561,7 @@ export default function Planner() {
             selected={selectedRoutine}
             onToggleItem={onToggleRoutineItem}
             onToggleAllRoutine={onToggleAllRoutine}
+            onIgnoreRoutineItem={onIgnoreRoutineItem}
           />
 
           {detailTask && planDate && (
