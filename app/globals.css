@@ -127,6 +127,13 @@ button:disabled {
 
 /* Невеликий набір класів замість Tailwind — проєкт свідомо без важких залежностей. */
 
+/* Назви задач у списках — з великої літери при показі (Етап 5, раунд 9), незалежно
+   від того, як людина ввела текст. НЕ text-transform:capitalize — той міняє кожне
+   слово, а не лише перше. Збережений текст не чіпаємо — суто візуальне. */
+.cap-first::first-letter {
+  text-transform: uppercase;
+}
+
 .btn-primary {
   background: var(--accent);
   color: var(--accent-contrast);

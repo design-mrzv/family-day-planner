@@ -32,7 +32,7 @@ export default function TaskInputSheet({
   onClose: () => void;
   text: string;
   setText: (v: string) => void;
-  onPlan: () => Promise<boolean>;
+  onPlan: (resolveConflict?: boolean) => Promise<AddTodayResult>;
   onAddToday: (text: string, resolveConflict?: boolean) => Promise<AddTodayResult>;
   loading: boolean;
   error: string | null;
@@ -79,9 +79,16 @@ export default function TaskInputSheet({
   const canSubmitTomorrow = hasChosen || text.trim() !== "";
   const canSubmitToday = text.trim() !== "";
 
-  async function handlePlan() {
-    const ok = await onPlan();
-    if (ok) resetAndClose();
+  async function handlePlan(resolveConflict?: boolean) {
+    const res = await onPlan(resolveConflict);
+    if (res.ok) {
+      resetAndClose();
+      return;
+    }
+    if (res.conflicts && res.conflicts.length > 0) {
+      setConflict(res.conflicts[0]);
+    }
+    // термінова помилка (не конфлікт) і далі йде через Planner.tsx's `error` prop
   }
 
   async function handleAddToday(resolveConflict?: boolean) {
@@ -119,10 +126,28 @@ export default function TaskInputSheet({
         </div>
 
         <div className="row" style={{ flexWrap: "nowrap" }}>
-          <button type="button" className="chip" aria-pressed={target === "today"} onClick={() => setTarget("today")}>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={target === "today"}
+            onClick={() => {
+              setTarget("today");
+              setConflict(null);
+              setAddError(null);
+            }}
+          >
             Сьогодні
           </button>
-          <button type="button" className="chip" aria-pressed={target === "tomorrow"} onClick={() => setTarget("tomorrow")}>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={target === "tomorrow"}
+            onClick={() => {
+              setTarget("tomorrow");
+              setConflict(null);
+              setAddError(null);
+            }}
+          >
             Завтра
           </button>
         </div>
@@ -183,33 +208,36 @@ export default function TaskInputSheet({
           }
         />
 
-        {target === "today" && conflict && (
+        {conflict && (
           <div className="card" style={{ borderColor: "var(--danger)" }}>
             <p>
               У цей час вже стоїть «{conflict.withTitle}» ({conflict.withStart}). Перенести її на вільний час?
             </p>
             <div className="row">
-              <button onClick={() => setConflict(null)} disabled={addingToday}>
+              <button onClick={() => setConflict(null)} disabled={target === "today" ? addingToday : loading}>
                 Скасувати
               </button>
-              <button className="btn-primary" onClick={() => handleAddToday(true)} disabled={addingToday}>
+              <button
+                className="btn-primary"
+                onClick={() => (target === "today" ? handleAddToday(true) : handlePlan(true))}
+                disabled={target === "today" ? addingToday : loading}
+              >
                 Перенести і додати
               </button>
             </div>
           </div>
         )}
 
-        {target === "today" ? (
-          !conflict && (
+        {!conflict &&
+          (target === "today" ? (
             <button className="btn-primary btn-lg" onClick={() => handleAddToday(false)} disabled={addingToday || !canSubmitToday}>
               {addingToday ? "Додаю…" : "Додати"}
             </button>
-          )
-        ) : (
-          <button className="btn-primary btn-lg" onClick={handlePlan} disabled={loading || !canSubmitTomorrow}>
-            {loading ? "Розкладаю…" : "Розкласти план"}
-          </button>
-        )}
+          ) : (
+            <button className="btn-primary btn-lg" onClick={() => handlePlan(false)} disabled={loading || !canSubmitTomorrow}>
+              {loading ? "Розкладаю…" : "Розкласти план"}
+            </button>
+          ))}
 
         {target === "today" ? addError && <p className="error-text">{addError}</p> : error && <p className="error-text">{error}</p>}
 

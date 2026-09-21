@@ -29,6 +29,25 @@ describe("placeNewTasks", () => {
     expect(existing.schedule[0].title).toBe("йога");
   });
 
+  it("назва вже є в schedule → мовчазний no-op, не дублює", () => {
+    const existing: SolverResult = { schedule: [scheduled("садок", "09:00", 30)], overflow: [], deadlines: [] };
+    const res = placeNewTasks([task("Садок ")], existing, new Map(), false); // інший регістр/пробіл — той самий ключ
+    expect(res).toEqual({ ok: true, displaced: [] });
+    expect(existing.schedule).toHaveLength(1);
+  });
+
+  it("назва вже є в overflow → мовчазний no-op, не дублює", () => {
+    const existing: SolverResult = {
+      schedule: [],
+      overflow: [{ title: "стоматолог", duration_min: 40, reason: "no_slot" }],
+      deadlines: [],
+    };
+    const res = placeNewTasks([task("стоматолог")], existing, new Map(), false);
+    expect(res).toEqual({ ok: true, displaced: [] });
+    expect(existing.schedule).toHaveLength(0);
+    expect(existing.overflow).toHaveLength(1);
+  });
+
   it("нова фіксована конфліктує з існуючою → ok:false, нічого не змінює", () => {
     const existing: SolverResult = { schedule: [scheduled("робота", "09:00", 60, "fixed")], overflow: [], deadlines: [] };
     const res = placeNewTasks([task("зустріч", "09:15")], existing, new Map(), false);

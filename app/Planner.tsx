@@ -272,7 +272,11 @@ export default function Planner() {
     }
   }
 
-  async function onPlan(): Promise<boolean> {
+  // "Завтра" — повний план з нуля, якщо на targetDate ще нема рядка, інакше
+  // домержовує нову задачу в існуючий (Етап 5, раунд 9 — той самий підхід, що
+  // onAddToday/api/plan/add-today). resolveConflict:true — другий виклик після
+  // підтвердження банера конфлікту.
+  async function onPlan(resolveConflict?: boolean): Promise<{ ok: boolean; message?: string; conflicts?: { newTitle: string; withTitle: string; withStart: string }[] }> {
     setLoading(true);
     setError(null);
     try {
@@ -282,20 +286,24 @@ export default function Planner() {
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: combinedText, today }),
+        body: JSON.stringify({ text: combinedText, today, resolve_conflict: resolveConflict || undefined }),
       });
       const data = await res.json();
+      if (res.status === 409) {
+        return { ok: false, conflicts: data.conflicts };
+      }
       if (!res.ok) {
         setError(data?.message ?? "Помилка.");
-        return false;
+        return { ok: false, message: data?.message ?? "Помилка." };
       }
       setPlanDate(today);
       setResult(data as SolverResult);
       setViewingToday(false); // onPlan() завжди планує на targetDate (завтра), не сьогодні
-      return true;
+      if (data.displaced?.length) setDisplacedNotice(data.displaced as string[]);
+      return { ok: true };
     } catch {
       setError("Мережа недоступна. Спробуй ще раз.");
-      return false;
+      return { ok: false, message: "Мережа недоступна. Спробуй ще раз." };
     } finally {
       setLoading(false);
     }

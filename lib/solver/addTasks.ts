@@ -37,8 +37,15 @@ export function placeNewTasks(
     else dayTasks.push(t);
   }
 
-  const fixed = dayTasks.filter((t) => t.fixed_time);
-  const flexible = dayTasks.filter((t) => !t.fixed_time);
+  // Назва вже є в розкладі чи overflow — мовчазний no-op, не дублюємо. Потрібно для
+  // "Завтра" (Етап 5, раунд 9): чіпи рутини лишаються позначеними між відкриттями
+  // модалки, і повторний сабміт з тими самими чіпами інакше додав би їх ще раз.
+  const existingKeys = new Set([
+    ...existing.schedule.filter((s) => s.status !== "moved").map((s) => normalizeTaskKey(s.title)),
+    ...existing.overflow.map((o) => normalizeTaskKey(o.title)),
+  ]);
+  const fixed = dayTasks.filter((t) => t.fixed_time && !existingKeys.has(normalizeTaskKey(t.title)));
+  const flexible = dayTasks.filter((t) => !t.fixed_time && !existingKeys.has(normalizeTaskKey(t.title)));
 
   // Фіксовані спершу — по черзі проти occupied, що зростає з кожною щойно розміщеною
   // (нові фіксовані задачі ловлять конфлікт і між собою, не тільки з існуючими).

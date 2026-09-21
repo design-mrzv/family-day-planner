@@ -126,7 +126,9 @@ function Timeline({
             >
               <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "center" }}>
                 <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
-                  <span style={{ textDecoration: done ? "line-through" : "none" }}>{s.title}</span>
+                  <span className="cap-first" style={{ textDecoration: done ? "line-through" : "none" }}>
+                    {s.title}
+                  </span>
                   <span className="muted" style={{ fontSize: "0.75rem" }}>
                     {s.start}–{minutesToLabel(timeToMinutes(s.start) + s.duration_min)}
                   </span>
@@ -228,7 +230,7 @@ export default function ScheduleView({
               <li key={`${o.title}-${o.reason}`}>
                 <div className="stack" style={{ gap: 4, width: "100%" }}>
                   <div className="row" style={{ justifyContent: "space-between" }}>
-                    <span>{o.title}</span>
+                    <span className="cap-first">{o.title}</span>
                     <span className="row">
                       {!readOnly && (
                         <DurationEditor key={o.duration_min} title={o.title} durationMin={o.duration_min} onSaved={onDurationSaved ?? (() => {})} />
@@ -255,7 +257,7 @@ export default function ScheduleView({
           <ul className="list-plain card">
             {result.deadlines.map((d, i) => (
               <li key={i}>
-                <span>{d.title}</span>
+                <span className="cap-first">{d.title}</span>
                 <span className="muted">до {d.date}</span>
               </li>
             ))}
