@@ -22,6 +22,7 @@ const COLOR_COUNT = 6;
 export default function TaskDetailSheet({
   task,
   date,
+  isToday,
   colorOverrides,
   onClose,
   onSaved,
@@ -31,6 +32,7 @@ export default function TaskDetailSheet({
 }: {
   task: Scheduled;
   date: string;
+  isToday: boolean;
   colorOverrides: Map<string, number>;
   onClose: () => void;
   onSaved: (result: SolverResult, displaced?: string[]) => void;
@@ -247,21 +249,25 @@ export default function TaskDetailSheet({
 
         {!conflict && (
           <>
-            {!moveMenuOpen ? (
-              <button type="button" className="btn-text" onClick={() => setMoveMenuOpen(true)} disabled={saving}>
-                Перенести…
-              </button>
-            ) : (
-              <div className="row">
-                <button type="button" className="btn-text" onClick={moveToday} disabled={moving}>
-                  {moving ? "Переношу…" : "Сьогодні · вільний час"}
-                </button>
-                <button type="button" className="btn-text" onClick={() => onMoveToTomorrow(task.title)} disabled={moving}>
-                  Завтра
-                </button>
-              </div>
+            {isToday && (
+              <>
+                {!moveMenuOpen ? (
+                  <button type="button" className="btn-text" onClick={() => setMoveMenuOpen(true)} disabled={saving}>
+                    Перенести…
+                  </button>
+                ) : (
+                  <div className="row">
+                    <button type="button" className="btn-text" onClick={moveToday} disabled={moving}>
+                      {moving ? "Переношу…" : "Сьогодні · вільний час"}
+                    </button>
+                    <button type="button" className="btn-text" onClick={() => onMoveToTomorrow(task.title)} disabled={moving}>
+                      Завтра
+                    </button>
+                  </div>
+                )}
+                {moveError && <p className="error-text">{moveError}</p>}
+              </>
             )}
-            {moveError && <p className="error-text">{moveError}</p>}
 
             <button className="btn-primary btn-lg" onClick={() => submit(false)} disabled={saving || invalid}>
               {saving ? "Зберігаю…" : "Зберегти"}

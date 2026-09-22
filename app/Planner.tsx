@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight, CaretDown } from "@phosphor-icons/react/dist/ssr";
 import type { SolverResult, Scheduled } from "@/lib/solver/types";
 import { normalizeTaskKey } from "@/lib/solver/config";
 import ScheduleView, { formatHeaderDate } from "./ScheduleView";
@@ -48,9 +48,14 @@ export default function Planner() {
   // задачі так і не знайшлося вільного часу, вона мовчки падає в overflow. Без цього
   // попапу підтвердження "перенести" виглядало б успішним, хоча задача випала з дня.
   const [displacedNotice, setDisplacedNotice] = useState<string[] | null>(null);
-  // "Зараз"-лінія на timeline має сенс лише коли дивимось СЬОГОДНІШНІй план (fetch
-  // /api/plan/today), не щойно розкладене "завтра" (onPlan() завжди планує на targetDate).
-  const [viewingToday, setViewingToday] = useState(false);
+  // Єдине джерело істини "який день зараз на екрані" (Етап 5, раунд 11) — не побічний
+  // ефект розрізнених дій. Дефолт true: початкове завантаження завжди намагається
+  // показати сьогодні (false тут раніше створював секундний хибний "порожній" напис
+  // "на завтра" до відповіді /api/plan/today).
+  const [viewingToday, setViewingToday] = useState(true);
+  // Дропдаун дати в заголовку — контрольований (не <details>), щоб закривати
+  // програмно після вибору, як уже робить settingsOpen.
+  const [dateMenuOpen, setDateMenuOpen] = useState(false);
   const [notifSupport, setNotifSupport] = useState<NotifSupport>("checking");
   const [notifStatus, setNotifStatus] = useState<NotifStatus>("idle");
   const [timezoneInput, setTimezoneInput] = useState("");
@@ -227,9 +232,37 @@ export default function Planner() {
     void detect();
   }, []);
 
+  // Перемикач дропдауна дати в заголовку — фетчить відповідний день і показує його.
+  // Той самий інваріант, що вже був: planDate ненульовий, лише коли є активний result.
+  async function loadView(which: "today" | "tomorrow") {
+    setDateMenuOpen(false);
+    try {
+      const res = await fetch(which === "today" ? "/api/plan/today" : "/api/plan/tomorrow");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (which === "today") {
+        if (data.tomorrow) setTargetDate(data.tomorrow as string);
+        if (data.date) setTodayDate(data.date as string);
+      }
+      setViewingToday(which === "today");
+      if (data.result) {
+        setResult(data.result as SolverResult);
+        setPlanDate(data.date as string);
+      } else {
+        setResult(null);
+        setPlanDate(null);
+      }
+    } catch {
+      /* мовчки — лишаємось на поточному перегляді */
+    }
+  }
+
   // Ранковий сценарій: якщо на сьогодні (за поясом користувача) вже є розклад — показуємо
   // його одразу, без повторного "Розкласти". Заодно підставляємо в поле дати "завтра"
   // за поясом користувача (не дату браузера) — цільова дата для вечірнього вводу.
+  // Логіка не через loadView() навмисно — react-hooks/set-state-in-effect не дозволяє
+  // викликати з ефекту функцію, що виставляє state; loadView лишається лише для
+  // дій за кліком (дропдаун дати).
   useEffect(() => {
     fetch("/api/plan/today")
       .then((r) => (r.ok ? r.json() : null))
@@ -240,7 +273,6 @@ export default function Planner() {
         if (data.result) {
           setResult(data.result as SolverResult);
           setPlanDate(data.date as string);
-          setViewingToday(true);
         }
       })
       .catch(() => {
@@ -384,7 +416,6 @@ export default function Planner() {
     <ScheduleView
       result={result}
       date={planDate}
-      onDurationSaved={onPlan}
       onToggleDone={onToggleDone}
       onOpenDetail={setDetailTask}
       isToday={viewingToday}
@@ -397,7 +428,29 @@ export default function Planner() {
   return (
     <main className="stack" style={{ maxWidth: 600, paddingBottom: 96 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>{formatHeaderDate(planDate ?? todayDate)}</h1>
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setDateMenuOpen((v) => !v)}
+            aria-expanded={dateMenuOpen}
+            aria-label="Обрати день"
+            className="row"
+            style={{ border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
+          >
+            <h1>{formatHeaderDate(planDate ?? (viewingToday ? todayDate : targetDate))}</h1>
+            <CaretDown size={18} />
+          </button>
+          {dateMenuOpen && (
+            <div className="row" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, zIndex: 20, flexWrap: "nowrap" }}>
+              <button type="button" className="chip" aria-pressed={viewingToday} onClick={() => loadView("today")}>
+                Сьогодні
+              </button>
+              <button type="button" className="chip" aria-pressed={!viewingToday} onClick={() => loadView("tomorrow")}>
+                Завтра
+              </button>
+            </div>
+          )}
+        </div>
         <div className="row">
           <button
             onClick={() => setSettingsOpen((v) => !v)}
@@ -549,7 +602,11 @@ export default function Planner() {
           )}
           {notifStatus === "error" && <p className="error-text">Не вдалося увімкнути сповіщення. Спробуй ще раз.</p>}
 
-          {result === null && <p className="muted">Ще немає розкладу на сьогодні. Натисни +, щоб написати задачі.</p>}
+          {result === null && (
+            <p className="muted">
+              {viewingToday ? "Ще немає розкладу на сьогодні." : "Ще немає розкладу на завтра."} Натисни +, щоб написати задачі.
+            </p>
+          )}
           {scheduleView}
 
           <button onClick={() => setInputOpen(true)} aria-label="Написати задачі" title="Написати задачі" className="fab btn-primary">
@@ -577,6 +634,7 @@ export default function Planner() {
               key={`${detailTask.title}-${detailTask.start}`}
               task={detailTask}
               date={planDate}
+              isToday={viewingToday}
               colorOverrides={colorOverrides}
               onClose={() => setDetailTask(null)}
               onSaved={(r, displaced) => {
