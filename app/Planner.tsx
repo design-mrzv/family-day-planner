@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight, CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { Gear, X, Plus, BellSimple, ShareNetwork, SignOut, Clock, CaretRight, CaretDown, Check } from "@phosphor-icons/react/dist/ssr";
 import type { SolverResult, Scheduled } from "@/lib/solver/types";
 import { normalizeTaskKey } from "@/lib/solver/config";
 import ScheduleView, { formatHeaderDate } from "./ScheduleView";
@@ -441,12 +441,14 @@ export default function Planner() {
             <CaretDown size={18} />
           </button>
           {dateMenuOpen && (
-            <div className="row" style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, zIndex: 20, flexWrap: "nowrap" }}>
-              <button type="button" className="chip" aria-pressed={viewingToday} onClick={() => loadView("today")}>
-                Сьогодні
+            <div className="date-menu">
+              <button type="button" className="date-menu-item" aria-pressed={viewingToday} onClick={() => loadView("today")}>
+                <span>{formatHeaderDate(todayDate)}</span>
+                {viewingToday && <Check size={16} weight="bold" />}
               </button>
-              <button type="button" className="chip" aria-pressed={!viewingToday} onClick={() => loadView("tomorrow")}>
-                Завтра
+              <button type="button" className="date-menu-item" aria-pressed={!viewingToday} onClick={() => loadView("tomorrow")}>
+                <span>{formatHeaderDate(targetDate)}</span>
+                {!viewingToday && <Check size={16} weight="bold" />}
               </button>
             </div>
           )}
