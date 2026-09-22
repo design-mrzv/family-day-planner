@@ -1,9 +1,15 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { type ParsedTasks } from "./schema";
 import { SYSTEM_INSTRUCTION, buildContents } from "./prompt";
 import { validateOutput } from "./validate";
 
 const MODEL = "gemini-3.5-flash-lite"; // дешевша за flash, окрема квота, парсингу вистачає
+// Резервна модель на випадок перевантаження основної (503/429) — Етап 5, раунд 10,
+// реальний живий інцидент. Те саме покоління, повноцінний "flash" (не lite), окрема
+// квота від основної. НЕ друга модель для перевірки виводу (те правило лишається —
+// fallback лише робить ТУ САМУ роботу парсингу, коли основна недоступна, не звіряє
+// результат основної).
+const FALLBACK_MODEL = "gemini-3.5-flash";
 
 // Модель повернула сміття (невалідний JSON після ретраю) — проблема у виводі, не в сервісі.
 export class ParseError extends Error {
@@ -31,9 +37,9 @@ export class ServiceError extends Error {
 // Порожня відповідь трактується як сміттєвий вивід (кандидат на ретрай), не як збій сервісу.
 class EmptyOutputError extends Error {}
 
-async function callModel(ai: GoogleGenAI, text: string, today: string): Promise<string> {
+async function callModel(ai: GoogleGenAI, model: string, text: string, today: string): Promise<string> {
   const res = await ai.models.generateContent({
-    model: MODEL,
+    model,
     contents: buildContents(text, today),
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
@@ -48,13 +54,27 @@ async function callModel(ai: GoogleGenAI, text: string, today: string): Promise<
   return out;
 }
 
-// Виклик моделі, що конвертує будь-який збій API/мережі у ServiceError.
-async function callOrServiceError(ai: GoogleGenAI, text: string, today: string): Promise<string> {
+// 503 (перевантаження) чи 429 (ліміт) — варто спробувати резервну модель, в неї
+// окрема квота. Інші збої (мережа, невірний ключ) fallback не полагодить.
+function isOverloaded(e: unknown): boolean {
+  return e instanceof ApiError && (e.status === 503 || e.status === 429);
+}
+
+// Основна модель недоступна → одна спроба резервною, без стану між викликами: щойно
+// основна знову запрацює, НАСТУПНИЙ виклик піде саме через неї (кожен виклик завжди
+// починає з основної). Будь-який збій (обох моделей) → ServiceError.
+async function callWithFallback(ai: GoogleGenAI, text: string, today: string): Promise<string> {
   try {
-    return await callModel(ai, text, today);
+    return await callModel(ai, MODEL, text, today);
   } catch (e) {
-    if (e instanceof EmptyOutputError) throw e; // сміттєвий вивід → ретрай вище
-    throw new ServiceError("Сервіс тимчасово недоступний (ліміт або перевантаження).", e);
+    if (e instanceof EmptyOutputError) throw e; // сміттєвий вивід → ретрай вище, не fallback
+    if (!isOverloaded(e)) throw new ServiceError("Сервіс тимчасово недоступний (ліміт або перевантаження).", e);
+    try {
+      return await callModel(ai, FALLBACK_MODEL, text, today);
+    } catch (e2) {
+      if (e2 instanceof EmptyOutputError) throw e2;
+      throw new ServiceError("Сервіс тимчасово недоступний (ліміт або перевантаження).", e2);
+    }
   }
 }
 
@@ -66,12 +86,12 @@ export async function parseTasks(text: string, today: string): Promise<ParsedTas
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    return validateOutput(await callOrServiceError(ai, text, today));
+    return validateOutput(await callWithFallback(ai, text, today));
   } catch (first) {
     if (first instanceof ServiceError) throw first; // ліміт/перевантаження — ретрай не поможе
     // Невалідний JSON або порожній вивід — одна повторна спроба.
     try {
-      return validateOutput(await callOrServiceError(ai, text, today));
+      return validateOutput(await callWithFallback(ai, text, today));
     } catch (second) {
       if (second instanceof ServiceError) throw second;
       throw new ParseError("Модель повернула невалідний JSON після ретраю", second);
