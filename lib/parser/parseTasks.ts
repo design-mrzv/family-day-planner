@@ -10,6 +10,12 @@ const MODEL = "gemini-3.5-flash-lite"; // дешевша за flash, окрем�
 // fallback лише робить ТУ САМУ роботу парсингу, коли основна недоступна, не звіряє
 // результат основної).
 const FALLBACK_MODEL = "gemini-3.5-flash";
+// Під час цього ж інциденту (Google-side, розділ 26 CONTRACT.md) виклики моделі можуть
+// не падати одразу, а висіти по 40+ секунд перед відповіддю — без ліміту це саме той час
+// з'їдає весь бюджет serverless-функції на Vercel (сира помилка платформи замість
+// зрозумілого ServiceError). Обрізаємо кожен окремий виклик, щоб перевантажена модель
+// не могла втримати запит довше, ніж є сенс чекати.
+const CALL_TIMEOUT_MS = 10_000;
 
 // Модель повернула сміття (невалідний JSON після ретраю) — проблема у виводі, не в сервісі.
 export class ParseError extends Error {
@@ -47,6 +53,7 @@ async function callModel(ai: GoogleGenAI, model: string, text: string, today: st
       temperature: 0,
       // Парсинг простий — мінімум «думання».
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
     },
   });
   const out = res.text;
@@ -54,10 +61,13 @@ async function callModel(ai: GoogleGenAI, model: string, text: string, today: st
   return out;
 }
 
-// 503 (перевантаження) чи 429 (ліміт) — варто спробувати резервну модель, в неї
-// окрема квота. Інші збої (мережа, невірний ключ) fallback не полагодить.
+// 503 (перевантаження), 429 (ліміт) чи власний таймаут (CALL_TIMEOUT_MS, модель не
+// встигла відповісти) — варто спробувати резервну модель, в неї окрема квота. Інші
+// збої (мережа, невірний ключ) fallback не полагодить.
 function isOverloaded(e: unknown): boolean {
-  return e instanceof ApiError && (e.status === 503 || e.status === 429);
+  if (e instanceof ApiError && (e.status === 503 || e.status === 429)) return true;
+  if (e instanceof Error && e.name === "AbortError") return true;
+  return false;
 }
 
 // Основна модель недоступна → одна спроба резервною, без стану між викликами: щойно

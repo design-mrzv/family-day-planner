@@ -11,6 +11,11 @@ import type { DurationOverrides } from "@/lib/solver/solve";
 import type { SolverResult } from "@/lib/solver/types";
 
 export const runtime = "nodejs";
+// parseTasks обрізає кожен окремий виклик моделі до 10с (CALL_TIMEOUT_MS) і може
+// зробити до двох послідовних викликів (основна модель + резервна) — явний ліміт тут,
+// щоб функція не впиралась у платформний дефолт раніше, ніж власна логіка встигне
+// віддати чесну ServiceError.
+export const maxDuration = 30;
 
 const BodySchema = z.strictObject({
   text: z.string().trim().min(1),

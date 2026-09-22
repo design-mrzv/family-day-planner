@@ -11,6 +11,11 @@ import type { SolverResult } from "@/lib/solver/types";
 
 // Ключ Gemini живе тут, на сервері. Node-рантайм (SDK потребує Node, не edge).
 export const runtime = "nodejs";
+// parseTasks обрізає кожен окремий виклик моделі до 10с (CALL_TIMEOUT_MS) і може
+// зробити до двох послідовних викликів (основна модель + резервна) — явний ліміт тут,
+// щоб функція не впиралась у платформний дефолт раніше, ніж власна логіка встигне
+// віддати чесну ServiceError.
+export const maxDuration = 30;
 
 function todayString(): string {
   return new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD у локальному часі
