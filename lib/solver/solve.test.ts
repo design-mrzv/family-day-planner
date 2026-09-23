@@ -8,11 +8,13 @@ const task = (
   fixed_time: string | null = null,
   deadline: string | null = null,
   time_hint: Task["time_hint"] = null,
+  duration_min: number | null = null,
 ): Task => ({
   title,
   fixed_time,
   deadline,
   time_hint,
+  duration_min,
 });
 
 // Інваріант: у розкладі жодні дві справи не накладаються.
@@ -84,6 +86,17 @@ describe("solve", () => {
   it("Етап 2: без overrides (дефолтний параметр) — поведінка як на Етапі 1", () => {
     const r = solve([task("вечеря")]);
     expect(r.schedule[0].duration_min).toBe(40);
+  });
+
+  it("Етап 5, раунд 13: явний duration_min з тексту перемагає словник", () => {
+    const r = solve([task("заняття з логопедом", null, null, null, 20)]);
+    expect(r.schedule[0].duration_min).toBe(20); // "занят" зі словника дав би 40
+  });
+
+  it("Етап 5, раунд 13: явний duration_min з тексту перемагає ЗБЕРЕЖЕНИЙ override", () => {
+    const overrides = new Map([["заняття з логопедом", 45]]);
+    const r = solve([task("заняття з логопедом", null, null, null, 20)], overrides);
+    expect(r.schedule[0].duration_min).toBe(20); // свіжий текст важливіший за стару пам'ять
   });
 
   it("справ на ~16 год, вікон на 15 → overflow непорожній, решта розкладена, нічого не втрачено", () => {

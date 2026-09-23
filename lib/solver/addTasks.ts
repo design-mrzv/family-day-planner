@@ -16,8 +16,10 @@ function occupiedFrom(schedule: Scheduled[]): Interval[] {
     .map((s) => ({ start: toMin(s.start), end: toMin(s.start) + s.duration_min, buffer: 0 }));
 }
 
-function resolveDuration(title: string, overrides: DurationOverrides): number {
-  return overrides.get(normalizeTaskKey(title)) ?? durationFor(title);
+// Той самий пріоритет, що solve.ts: явно написане в тексті ЗАРАЗ → збережена
+// правка → словник (Етап 5, раунд 13).
+function resolveDuration(task: Task, overrides: DurationOverrides): number {
+  return task.duration_min ?? overrides.get(normalizeTaskKey(task.title)) ?? durationFor(task.title);
 }
 
 // Додавання нової(их) задачі(задач) в УЖЕ ІСНУЮЧИЙ розклад дня (Етап 5, FAB "Сьогодні") —
@@ -56,7 +58,7 @@ export function placeNewTasks(
   // задача взагалі випала з розкладу дня).
   const displaced: string[] = [];
   for (const t of fixed) {
-    const d = resolveDuration(t.title, durationOverrides);
+    const d = resolveDuration(t, durationOverrides);
     const start = toMin(t.fixed_time as string);
     const end = start + d;
 
@@ -85,7 +87,7 @@ export function placeNewTasks(
 
   // Гнучкі — у вільне вікно, той самий пріоритет правил, що solve().
   for (const t of flexible) {
-    const d = resolveDuration(t.title, durationOverrides);
+    const d = resolveDuration(t, durationOverrides);
     const rw = ruleWindow(t.title) ?? windowForHint(t.time_hint);
     const [lo, hi] = rw ?? [toMin(WORK_START), toMin(WORK_END)];
     const occupied = occupiedFrom(existing.schedule);

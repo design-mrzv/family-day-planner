@@ -8,12 +8,16 @@ export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
 export const TimeHintSchema = z.enum(["morning", "afternoon", "evening"]).nullable();
 
 // Одна справа у виводі LLM-парсера.
-// strictObject: зайві поля (напр. duration) відхиляються — LLM НЕ оцінює час.
+// strictObject: зайві поля відхиляються — LLM НЕ оцінює/вгадує час.
+// duration_min — виняток: не оцінка, а ВИТЯГУВАННЯ явно написаного людиною числа
+// ("(30 хв)"), той самий клас дії, що fixed_time/deadline. Solver і далі призначає
+// тривалість сам, якщо в тексті нічого не вказано (null).
 export const TaskSchema = z.strictObject({
   title: z.string().trim().min(1),
   fixed_time: z.string().regex(TIME_RE).nullable(),
   deadline: z.string().regex(DATE_RE).nullable(),
   time_hint: TimeHintSchema,
+  duration_min: z.number().int().min(5).max(480).nullable(),
 });
 
 // Повний вивід парсера: { tasks: [...] }, нічого крім цього.

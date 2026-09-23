@@ -21,28 +21,42 @@ describe("validateOutput", () => {
   it("приймає валідний вивід з усіма варіантами полів", () => {
     const parsed = validateOutput(
       ok([
-        { title: "тренування", fixed_time: null, deadline: null, time_hint: null },
-        { title: "забрати старшого", fixed_time: "15:00", deadline: null, time_hint: null },
-        { title: "оплатити садок", fixed_time: null, deadline: "2026-09-08", time_hint: null },
-        { title: "щось приготувати", fixed_time: null, deadline: null, time_hint: "evening" },
+        { title: "тренування", fixed_time: null, deadline: null, time_hint: null, duration_min: null },
+        { title: "забрати старшого", fixed_time: "15:00", deadline: null, time_hint: null, duration_min: null },
+        { title: "оплатити садок", fixed_time: null, deadline: "2026-09-08", time_hint: null, duration_min: null },
+        { title: "щось приготувати", fixed_time: null, deadline: null, time_hint: "evening", duration_min: null },
+        { title: "заняття з логопедом", fixed_time: null, deadline: null, time_hint: null, duration_min: 30 },
       ]),
     );
-    expect(parsed.tasks).toHaveLength(4);
+    expect(parsed.tasks).toHaveLength(5);
     expect(parsed.tasks[1].fixed_time).toBe("15:00");
     expect(parsed.tasks[3].time_hint).toBe("evening");
+    expect(parsed.tasks[4].duration_min).toBe(30);
   });
 
   it("відхиляє невалідне значення time_hint", () => {
     expect(() =>
       validateOutput(
-        ok([{ title: "х", fixed_time: null, deadline: null, time_hint: "night" }]),
+        ok([{ title: "х", fixed_time: null, deadline: null, time_hint: "night", duration_min: null }]),
       ),
     ).toThrow();
   });
 
   it("відхиляє відсутнє поле time_hint (strict-схема вимагає його явно)", () => {
     expect(() =>
-      validateOutput(ok([{ title: "х", fixed_time: null, deadline: null }])),
+      validateOutput(ok([{ title: "х", fixed_time: null, deadline: null, duration_min: null }])),
+    ).toThrow();
+  });
+
+  it("відхиляє відсутнє поле duration_min (strict-схема вимагає його явно)", () => {
+    expect(() =>
+      validateOutput(ok([{ title: "х", fixed_time: null, deadline: null, time_hint: null }])),
+    ).toThrow();
+  });
+
+  it.each([0, 4, 481, 600, 1.5])("відхиляє невалідний duration_min: %s", (bad) => {
+    expect(() =>
+      validateOutput(ok([{ title: "х", fixed_time: null, deadline: null, time_hint: null, duration_min: bad }])),
     ).toThrow();
   });
 
@@ -50,7 +64,7 @@ describe("validateOutput", () => {
     expect(validateOutput(ok([])).tasks).toEqual([]);
   });
 
-  it("відхиляє зайве поле duration (LLM не оцінює час)", () => {
+  it("відхиляє зайве поле duration (правильна назва — duration_min)", () => {
     expect(() =>
       validateOutput(ok([{ title: "вечеря", fixed_time: null, deadline: null, duration: 40 }])),
     ).toThrow();

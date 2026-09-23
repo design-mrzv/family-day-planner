@@ -49,9 +49,11 @@ export function placeFlexible(lo: number, hi: number, d: number, occupied: Inter
   return null;
 }
 
-// Тривалість: спершу перевірена мамою правка (Етап 2), інакше дефолт зі словника.
-function resolveDuration(title: string, overrides: DurationOverrides): number {
-  return overrides.get(normalizeTaskKey(title)) ?? durationFor(title);
+// Тривалість, за пріоритетом: явно написана в тексті ЗАРАЗ (Етап 5, раунд 13) →
+// збережена мамою правка (Етап 2) → дефолт зі словника. Свіжий текст перемагає стару
+// пам'ять — свідоме, щойно ухвалене рішення важливіше за те, що збережено раніше.
+function resolveDuration(task: Task, overrides: DurationOverrides): number {
+  return task.duration_min ?? overrides.get(normalizeTaskKey(task.title)) ?? durationFor(task.title);
 }
 
 // Ручне редагування часу задачі (Етап 5): чи перетинаються два інтервали на таймлайні.
@@ -96,7 +98,7 @@ export function solve(tasks: Task[], durationOverrides: DurationOverrides = new 
   // 4. Фіксовані справи на свої місця + виявлення конфліктів (накладень).
   const fixedIvs = fixed.map((t) => {
     const start = toMin(t.fixed_time as string);
-    return { task: t, start, end: start + resolveDuration(t.title, durationOverrides) };
+    return { task: t, start, end: start + resolveDuration(t, durationOverrides) };
   });
 
   const conflicted = new Set<number>();
@@ -129,7 +131,7 @@ export function solve(tasks: Task[], durationOverrides: DurationOverrides = new 
     // Ключове слово в title має пріоритет; time_hint від LLM — фолбек, коли слів нема.
     const rw = ruleWindow(t.title) ?? windowForHint(t.time_hint);
     const [lo, hi] = rw ?? [toMin(WORK_START), toMin(WORK_END)];
-    return { task: t, i, lo, hi, d: resolveDuration(t.title, durationOverrides), constrained: rw != null };
+    return { task: t, i, lo, hi, d: resolveDuration(t, durationOverrides), constrained: rw != null };
   });
   meta.sort((a, b) => Number(b.constrained) - Number(a.constrained) || a.i - b.i);
 

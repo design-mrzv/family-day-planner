@@ -9,7 +9,8 @@ const task = (
   fixed_time: string | null = null,
   deadline: string | null = null,
   time_hint: Task["time_hint"] = null,
-): Task => ({ title, fixed_time, deadline, time_hint });
+  duration_min: number | null = null,
+): Task => ({ title, fixed_time, deadline, time_hint, duration_min });
 
 const scheduled = (title: string, start: string, duration_min: number, type: Scheduled["type"] = "flexible"): Scheduled => ({
   title,
@@ -27,6 +28,14 @@ describe("placeNewTasks", () => {
     expect(res).toEqual({ ok: true, displaced: [] });
     expect(existing.schedule).toHaveLength(1);
     expect(existing.schedule[0].title).toBe("йога");
+  });
+
+  it("Етап 5, раунд 13: явний duration_min з тексту перемагає і словник, і збережений override", () => {
+    const existing = empty();
+    const overrides = new Map([["заняття з логопедом", 45]]);
+    const res = placeNewTasks([task("заняття з логопедом", null, null, null, 20)], existing, overrides, false);
+    expect(res).toEqual({ ok: true, displaced: [] });
+    expect(existing.schedule[0].duration_min).toBe(20);
   });
 
   it("назва вже є в schedule → мовчазний no-op, не дублює", () => {
