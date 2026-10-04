@@ -1,4 +1,4 @@
-# PRODUCT_SPEC.md v2 — Family Day Planner (робоча назва)
+# PRODUCT_SPEC.md v2 — Loopin
 
 > Назва тимчасова, плейсхолдер для розробки. Не блокує білд.
 >

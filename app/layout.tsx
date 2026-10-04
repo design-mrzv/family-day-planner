@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Family Day Planner",
-  description: "Планувальник дня — MVP",
+  title: "Loopin",
+  description: "Loopin — планувальник дня для перевантажених мам",
   // iOS "Додати на головний екран" читає apple-touch-icon, не манiфест (app/manifest.ts).
   icons: { icon: "/icon.png", apple: "/icon.png" },
 };

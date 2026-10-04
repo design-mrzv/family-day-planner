@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     let anySent = false;
     for (const sub of subs) {
       try {
-        await sendPush(sub, { title: "Family Day Planner", body: "Що плануєш на завтра? Напиши одним текстом у застосунку." });
+        await sendPush(sub, { title: "Loopin", body: "Що плануєш на завтра? Напиши одним текстом у застосунку." });
         anySent = true;
       } catch (e) {
         console.error("evening-ping sendPush failed for", sub.id, e);

@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Family Day Planner — правила ядра
+# Loopin — правила ядра
 
 Планувальник дня для перевантажених мам. Продукт: `PRODUCT_SPEC_v2.md`.
 Порядок білду: `BUILD_PLAN.md`. Контракт даних: `docs/CONTRACT.md`.

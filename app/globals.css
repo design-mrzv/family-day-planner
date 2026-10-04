@@ -62,6 +62,21 @@ main {
   margin-right: auto;
 }
 
+/* Лого Loopin (public/black-logo.svg, public/white-logo.svg). Знак займає ~767x288 у
+   полотні 1328x800 — кроп 784x304 по центру прибирає порожні поля без правки самих файлів
+   (background-size = 1328/784, позиція 50% 50% — знак стоїть рівно по центру полотна). */
+.logo {
+  display: block;
+  aspect-ratio: 784 / 304;
+  background: url("/black-logo.svg") no-repeat 50% 50% / 169.39% auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo {
+    background-image: url("/white-logo.svg");
+  }
+}
+
 h1 {
   font-size: 1.5rem;
   font-weight: 600;

@@ -1,4 +1,4 @@
-# BUILD_PLAN.md — Family Day Planner MVP
+# BUILD_PLAN.md — Loopin MVP
 
 > Робочий документ для білду через Claude Code. Контракт продукту: PRODUCT_SPEC_v2.md.
 > Стек: Next.js (App Router) на Vercel, GitHub. LLM через API (стартова модель — доступна;

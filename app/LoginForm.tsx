@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Logo from "./Logo";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -37,7 +38,9 @@ export default function LoginForm() {
       className="stack"
       style={{ maxWidth: 600, minHeight: "calc(100dvh - 32px)", justifyContent: "center" }}
     >
-      <h1>Family Day Planner</h1>
+      <h1>
+        <Logo />
+      </h1>
       <p className="muted">Введи email — надішлемо посилання для входу.</p>
 
       <form onSubmit={onSubmit} className="stack" style={{ gap: 16 }}>

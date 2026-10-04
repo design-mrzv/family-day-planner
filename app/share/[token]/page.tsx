@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { users, dailyPlans } from "@/lib/db/schema";
 import { hashShareToken } from "@/lib/share";
 import { dateStringInTz } from "@/lib/timezone";
+import Logo from "../../Logo";
 import ScheduleView from "../../ScheduleView";
 import type { SolverResult } from "@/lib/solver/types";
 
@@ -34,7 +35,9 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
 
   return (
     <main className="stack" style={{ maxWidth: 600 }}>
-      <h1>Family Day Planner</h1>
+      <h1>
+        <Logo />
+      </h1>
       {result ? <ScheduleView result={result} date={today} readOnly isToday /> : <p className="muted">Плану на сьогодні ще немає.</p>}
     </main>
   );

@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // Кольори — той самий акцент/фон, що app/globals.css (Етап 5).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Family Day Planner",
-    short_name: "Planner",
+    name: "Loopin",
+    short_name: "Loopin",
     start_url: "/",
     display: "standalone",
     background_color: "#fafaf9",
