@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requestLoginCode } from "@/lib/auth/loginCode";
+import { isEmailAllowed } from "@/lib/auth/allowlist";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,18 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "bad_request", message: "Enter a valid email address." },
       { status: 400 },
+    );
+  }
+
+  // Відсікаємо ДО запису в БД і до відправки — стороння адреса не має ні витрачати
+  // квоту, ні лишати по собі рядків.
+  if (!isEmailAllowed(parsed.data.email, process.env.AUTH_ALLOWED_EMAILS)) {
+    return Response.json(
+      {
+        error: "not_invited",
+        message: "Loopin is in private beta — this address isn't on the list yet.",
+      },
+      { status: 403 },
     );
   }
 
