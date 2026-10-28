@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, date, jsonb, integer, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date, jsonb, integer, unique, index } from "drizzle-orm/pg-core";
 
 // Етап 2 — памʼять. Схема узгоджена в докстрінгу вище рівня коду (сесія 2026-09-07).
 
@@ -19,7 +19,9 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Одноразові токени для входу через email-посилання (magic link).
+// DEPRECATED (замінено на emailCodes нижче). Лишається в схемі лише для того, щоб
+// міграція з кодами була суто адитивною й оборотною; дропнемо окремою міграцією,
+// коли новий вхід відпрацює в проді.
 export const magicLinks = pgTable("magic_links", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull(),
@@ -28,6 +30,27 @@ export const magicLinks = pgTable("magic_links", {
   usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Одноразові 6-значні коди для входу через email. Замінили magic link: посилання
+// з пошти відкривається в Safari, а не у встановленій PWA, тому користувач лишався
+// в застосунку незалогіненим — а без цього на iOS не працюють пуші.
+// Зберігаємо лише SHA-256 хеш коду (як shareTokenHash), ніколи самі цифри.
+// attempts — лічильник невдалих спроб; на MAX_ATTEMPTS код згорає (lib/auth/emailCode.ts).
+// requestIp потрібен для квоти на IP (lib/auth/throttle.ts).
+export const emailCodes = pgTable(
+  "email_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    codeHash: text("code_hash").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    requestIp: text("request_ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("email_codes_email_created_idx").on(t.email, t.createdAt), index("email_codes_ip_created_idx").on(t.requestIp, t.createdAt)],
+);
 
 // Розклад одного дня одного користувача. tasks — розширений Task+Scheduled зі статусом
 // ("pending" | "done" | "skipped" | "moved"), джерело для памʼяті рутини (агрегація за

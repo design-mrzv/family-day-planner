@@ -64,6 +64,13 @@
       "when": 1790021279502,
       "tag": "0008_sharp_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793181358015,
+      "tag": "0009_supreme_mad_thinker",
+      "breakpoints": true
     }
   ]
 }
